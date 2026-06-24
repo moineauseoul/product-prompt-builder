@@ -810,8 +810,9 @@ function getAnalysisScope() {
 }
 
 function getSlotReference(index) {
-  if (index === 0) return 'Primary full product image';
-  return document.getElementById(`detail-ref-${index}`)?.value.trim() || `Detail reference image from slot ${index + 1}`;
+  if (index === 0) return '[IMPORTANT CONTEXT - Primary full product image]';
+  const label = document.getElementById(`detail-ref-${index}`)?.value.trim() || `Detail reference image from slot ${index + 1}`;
+  return `[IMPORTANT CONTEXT - ${label}]`;
 }
 
 function getAnalysisItems() {
@@ -1141,6 +1142,7 @@ async function analyzeImageWithClaude(items) {
    - Closures (buttons, zippers, ties)
    - Special design features (pleats, pintucks, slits, ruffles)
    - Logo or branding details (location, type: embroidered/metal/printed)
+   - For logo details, pay special attention to: exact location on the garment (use reference slot descriptions if provided), material type (embroidered/metal charm/printed), size (small/medium), and exact position description (e.g. lower right hem, center chest, etc). Use the slot description labels provided to understand the context of each detail image.
    - Hem and edge finishing details
    - Any hardware or accessories
 
