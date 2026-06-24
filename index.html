@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product Prompt Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gray-50:  #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+      --accent:       #111827;
+      --accent-hover: #000000;
+      --accent-light: #f3f4f6;
+      --accent-border:#9ca3af;
+      --success:      #111827;
+      --success-bg:   #f9fafb;
+      --success-border:#d1d5db;
+      --danger:       #ef4444;
+      --danger-bg:    #fef2f2;
+      --danger-border:#fecaca;
+      --radius: 8px;
+    }
+
+    html { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'Noto Sans', 'Noto Sans KR', sans-serif;
+      font-size: 14px;
+      color: var(--gray-900);
+      background: #f0efed;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #fff;
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 24px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header h1 { font-size: 15px; font-weight: 600; letter-spacing: 0; }
+    header .badge {
+      font-size: 10px; font-weight: 600;
+      color: var(--gray-500); background: var(--gray-100);
+      padding: 2px 7px; border-radius: 20px;
+      border: 1px solid var(--gray-200);
+    }
+
+    /* ── Header API Dropdown ── */
+    .api-dropdown-wrap {
+      margin-left: auto;
+      position: relative;
+    }
+    .api-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 20px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gray-700);
+      cursor: pointer;
+      transition: border-color .15s;
+      white-space: nowrap;
+    }
+    .api-toggle-btn:hover { border-color: var(--gray-400); }
+    .api-header-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--gray-300);
+      flex-shrink: 0;
+    }
+    .api-header-dot.saved { background: #16a34a; }
+    .api-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 280px;
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.09);
+      z-index: 200;
+    }
+    .api-dropdown.open { display: block; }
+    .api-dropdown-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray-400);
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    /* ── Main content — 2컬럼 그리드, 전체 높이 ── */
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      max-width: 100%;
+      height: calc(100vh - 52px - 120px);
+      overflow: hidden;
+      padding: 24px 48px;
+      background: #ffffff;
+      border-radius: 16px;
+      margin: 60px 180px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    /* ── 좌우 컬럼 ── */
+    .col-left {
+      height: 100%;
+      overflow: hidden;
+      padding: 20px 24px;
+      border-right: 1px solid var(--gray-200);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .col-left > .content-section {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .col-right {
+      height: 100%;
+      overflow: hidden;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    /* 상품정보·촬영설정은 고정, 프롬프트 카드는 나머지 채움 */
+    .col-right > .content-section { flex-shrink: 0; }
+    .col-right > .content-section:last-child { flex: 1; min-height: 0; }
+
+    /* ── Content sections — 카드 스타일 제거, 구분은 제목으로 ── */
+    .content-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 0;
+      margin-bottom: 0;
+    }
+
+    /* ── Section heading (카드 상단 대표 제목) ── */
+    .section-heading {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-900);
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--gray-100);
+      margin-bottom: 2px;
+    }
+    /* 제목 + 우측 버튼 행 */
+    .section-heading-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--gray-100);
+      margin-bottom: 2px;
+    }
+    .section-heading-row .section-heading {
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
+
+    /* ── Section sub-titles ── */
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray-400);
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    /* ── 2-col field row ── */
+    .field-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    /* ── Image Upload ── */
+    .upload-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      align-items: stretch;
+      flex: 1;
+      min-height: 0;
+      border-radius: var(--radius);
+      transition: background .15s, box-shadow .15s;
+    }
+    .upload-area.drag-over {
+      background: var(--gray-100);
+      box-shadow: 0 0 0 6px var(--gray-100);
+    }
+    /* mainSection — 높이를 채우도록 flex column */
+    .upload-area > div:first-child {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .slot-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--gray-400);
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    /* 메인 슬롯 — 남은 높이를 꽉 채움 */
+    .upload-slot-main { position: relative; width: 100%; flex: 1; min-height: 0; }
+    .upload-slot-main > label { min-height: unset; }
+    .upload-slot-main:has(.thumb-wrap.has-image) > label { display: none; }
+    .upload-slot-main .thumb-wrap { position: absolute; inset: 0; }
+    .upload-slot-main .thumb-wrap img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      background-color: var(--gray-50);
+      border-radius: var(--radius);
+      border: 1.5px solid var(--gray-200);
+    }
+    .upload-slot-main .thumb-wrap .del-btn { position: absolute; top: 4px; right: 4px; }
+    /* 디테일 슬롯 목록 — 2×2 그리드, 높이 채움 */
+    .upload-detail-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 8px;
+    }
+    /* 각 디테일 셀 — 세로 배치 (썸네일 위, 인풋 아래) */
+    .slot-detail-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-height: 0;
+    }
+    .slot-detail-thumb-col { display: flex; flex-direction: column; gap: 4px; flex: 1; min-height: 0; }
+    /* 디테일 슬롯 — 높이 채움 */
+    .upload-slot-detail { position: relative; width: 100%; flex: 1; min-height: 0; }
+
+    /* 공통 upload-slot */
+    .upload-slot label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%; height: 100%;
+      border: 1.5px dashed var(--gray-300);
+      border-radius: var(--radius);
+      cursor: pointer;
+      color: var(--gray-400);
+      font-size: 11px;
+      gap: 4px;
+      transition: border-color .15s, background .15s;
+    }
+    .upload-slot label:hover { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+    .upload-slot input[type="file"] { display: none; }
+    .thumb-wrap { position: absolute; inset: 0; display: none; }
+    .thumb-wrap.has-image { display: block; }
+    .thumb-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--gray-200);
+    }
+    .thumb-wrap .del-btn {
+      position: absolute; top: 4px; right: 4px;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: rgba(0,0,0,.55);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 11px;
+      transition: background .15s;
+    }
+    .thumb-wrap .del-btn:hover { background: var(--danger); }
+
+    /* 디테일 참고 입력 */
+    .detail-ref-input {
+      width: 100%;
+      padding: 5px 8px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 11px;
+      color: var(--gray-900);
+      background: #fff;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .detail-ref-input:focus { border-color: var(--accent); }
+    .detail-ref-input::placeholder { color: var(--gray-400); }
+
+    /* Analysis */
+    .upload-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .upload-count { font-size: 12px; color: var(--gray-400); }
+    .analysis-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .analysis-range {
+      display: flex;
+      gap: 5px;
+    }
+    /* 라디오 입력 숨김 — 시각적으로 chip 토글 */
+    .analysis-range input[type="radio"] { display: none; }
+    .analysis-range label {
+      display: inline-flex;
+      align-items: center;
+      height: 32px;
+      padding: 0 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 20px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gray-700);
+      cursor: pointer;
+      user-select: none;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .analysis-range label:hover { border-color: var(--accent); color: var(--accent); }
+    .analysis-range label:has(input:checked) {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+    .analysis-banner {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      border: 1px solid transparent;
+    }
+    .analysis-banner.loading { display: flex; background: var(--accent-light); color: var(--accent); border-color: var(--accent-border); }
+    .analysis-banner.success { display: flex; background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+    .analysis-banner.error   { display: flex; background: var(--danger-bg);  color: var(--danger);  border-color: var(--danger-border); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 13px; height: 13px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* ── Form fields ── */
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 13px; font-weight: 500; color: var(--gray-700); }
+    .field input[type="text"],
+    .field textarea,
+    .field input[type="password"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--gray-900);
+      background: #fff;
+      outline: none;
+      transition: border-color .15s, background .15s, color .15s;
+      resize: vertical;
+    }
+    .field input:focus, .field textarea:focus { border-color: var(--accent); }
+    .field input::placeholder, .field textarea::placeholder { color: var(--gray-400); }
+    .field input.analyzing,
+    .field textarea.analyzing {
+      color: var(--accent);
+      border-color: var(--accent-border);
+      background: var(--accent-light);
+      font-style: italic;
+      cursor: not-allowed;
+    }
+
+    /* ── Hex input ── */
+    .hex-input {
+      width: 100px;
+      padding: 6px 10px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--gray-900);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .hex-input:focus { border-color: var(--accent); }
+    .hex-input::placeholder { color: var(--gray-400); }
+
+    /* ── Chip buttons ── */
+    .chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      padding: 6px 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 20px;
+      background: #fff;
+      font-family: inherit; font-size: 13px;
+      color: var(--gray-700);
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+
+    /* ── Color chips ── */
+    .color-chip {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 2.5px solid transparent;
+      cursor: pointer;
+      transition: transform .15s, border-color .15s;
+      outline: none;
+      flex-shrink: 0;
+    }
+    .color-chip:hover { transform: scale(1.1); }
+    .color-chip.active { border-color: var(--gray-900); transform: scale(1.1); }
+    .color-chip[data-value="white"]      { background: #ffffff; box-shadow: inset 0 0 0 1px var(--gray-300); }
+    .color-chip[data-value="light-gray"] { background: #e5e7eb; }
+    .color-chip[data-value="soft-gray"]  { background: #f5f5f5; box-shadow: inset 0 0 0 1px var(--gray-300); }
+
+    /* ── Checkbox options (2-col) ── */
+    .check-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
+    .check-item {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; font-size: 13px; color: var(--gray-700);
+      user-select: none;
+    }
+    .check-item input[type="checkbox"] {
+      width: 15px; height: 15px;
+      accent-color: var(--accent);
+      cursor: pointer; flex-shrink: 0;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      font-family: inherit; font-size: 13px; font-weight: 500;
+      cursor: pointer; border: none;
+      transition: all .15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-outline { background: #fff; color: var(--gray-700); border: 1.5px solid var(--gray-200); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-outline:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-small { padding: 5px 10px; font-size: 11px; }
+
+    /* ── Prompt area ── */
+    .prompt-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #prompt-output {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      padding: 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--gray-700);
+      background: var(--gray-50);
+      resize: none;
+      outline: none;
+      transition: border-color .15s;
+    }
+    #prompt-output:focus { border-color: var(--accent); }
+    .prompt-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .prompt-status {
+      font-size: 12px;
+      color: var(--gray-400);
+    }
+    .prompt-status.error { color: var(--danger); }
+    .prompt-status.success { color: var(--success); }
+    .copy-toast { font-size: 12px; color: var(--success); opacity: 0; transition: opacity .3s; margin-right: 6px; }
+    .copy-toast.show { opacity: 1; }
+
+    /* ── API Key (inside dropdown) ── */
+    .api-key-status { display: flex; align-items: center; gap: 4px; font-size: 11px; margin-top: 4px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gray-300); }
+    .status-dot.saved { background: #16a34a; }
+    .api-key-status span { color: var(--gray-500); }
+    .eye-btn {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: var(--gray-400); padding: 2px; display: flex;
+    }
+    .eye-btn:hover { color: var(--gray-700); }
+    .input-wrap { position: relative; }
+    .input-wrap input { padding-right: 36px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+  </svg>
+  <h1>Product Prompt Builder</h1>
+  <span class="badge">Beta</span>
+
+  <!-- API 설정 드롭다운 -->
+  <div class="api-dropdown-wrap" id="api-dropdown-wrap">
+    <button class="api-toggle-btn" id="api-toggle-btn">
+      <span class="api-header-dot" id="api-header-dot"></span>
+      API 설정
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="6,9 12,15 18,9"/>
+      </svg>
+    </button>
+    <div class="api-dropdown" id="api-dropdown">
+      <p class="api-dropdown-label">Claude API Key</p>
+      <div class="field">
+        <div class="input-wrap">
+          <input type="password" id="claude-key" placeholder="sk-ant-..." autocomplete="off" />
+          <button class="eye-btn" data-target="claude-key" aria-label="보기">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="api-key-status">
+          <span class="status-dot" id="claude-dot"></span>
+          <span id="claude-status">미입력</span>
+          <span style="color:var(--gray-300);margin:0 4px;">·</span>
+          <span style="color:var(--gray-400);font-size:11px;">브라우저에만 저장됨</span>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+        <button class="btn btn-outline btn-small" id="save-keys-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/>
+          </svg>
+          저장
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main Content ── -->
+<div class="main-content">
+
+  <!-- ── 왼쪽 컬럼 ── -->
+  <div class="col-left">
+
+  <!-- ① 이미지 업로드 -->
+  <section class="content-section">
+    <div class="section-heading-row">
+      <p class="section-heading">이미지 업로드</p>
+      <button class="btn btn-outline btn-small" id="reset-all-btn">전체 초기화</button>
+    </div>
+
+    <div class="upload-area" id="upload-area"></div>
+
+    <div class="analysis-controls">
+      <div class="analysis-range" id="analysis-range">
+        <label>
+          <input type="radio" name="analysis-scope" value="primary" checked />
+          슬롯 1만 분석
+        </label>
+        <label>
+          <input type="radio" name="analysis-scope" value="all" />
+          전체 이미지 분석
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;color:var(--gray-500);">이미지 업로드 후 분석하세요.</span>
+        <button class="btn btn-primary btn-small" id="analyze-btn" disabled>이미지 분석</button>
+      </div>
+    </div>
+
+    <div class="upload-footer">
+      <div class="analysis-banner" id="analysis-banner">
+        <span class="spinner" id="analysis-spinner" style="display:none;"></span>
+        <span id="banner-text"></span>
+      </div>
+      <p class="upload-count"><span id="img-count">0</span> / 5장</p>
+    </div>
+  </section>
+
+  </div><!-- /col-left -->
+
+  <!-- ── 오른쪽 컬럼 ── -->
+  <div class="col-right">
+
+  <!-- ② 상품 정보 -->
+  <section class="content-section">
+    <p class="section-heading">상품 정보</p>
+    <div>
+      <p class="section-title">카테고리</p>
+      <div class="chip-group" id="category-group">
+        <button class="chip active" data-value="clothing">의류</button>
+        <button class="chip" data-value="accessory">악세</button>
+      </div>
+    </div>
+
+    <div class="field-row-2">
+      <div>
+        <p class="section-title">소재 (한글)</p>
+        <div class="field">
+          <input type="text" id="material" placeholder="예: 100% 린넨, 울 혼방, 가죽..." />
+        </div>
+      </div>
+      <div>
+        <p class="section-title">컬러 (한글)</p>
+        <div class="field">
+          <input type="text" id="color-text" placeholder="예: 오프화이트, 버건디, 네이비..." />
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="section-title">최종 디테일 설명 (한글)</p>
+      <div class="field">
+        <textarea id="detail" rows="3" placeholder="예: 오버핏, 드롭숄더, 사이드 슬릿, 자수 로고..."></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ 촬영 설정 -->
+  <section class="content-section">
+    <p class="section-heading">촬영 설정</p>
+    <div class="field-row-2">
+      <div>
+        <p class="section-title">배경색</p>
+        <div class="chip-group" id="bg-group" style="align-items:center;gap:8px;flex-wrap:nowrap;">
+          <button class="color-chip active" data-value="white"      title="화이트 (#ffffff)"></button>
+          <button class="color-chip"        data-value="light-gray" title="라이트 그레이 (#efefef)"></button>
+          <button class="color-chip"        data-value="soft-gray"  title="소프트 그레이 (#f5f5f5)"></button>
+          <input class="hex-input" id="custom-bg" type="text" placeholder="# 직접입력" maxlength="7" />
+        </div>
+      </div>
+      <div>
+        <p class="section-title">컷 종류</p>
+        <div class="chip-group" id="cut-group">
+          <button class="chip active" data-value="front">정면</button>
+          <button class="chip" data-value="back">후면</button>
+          <button class="chip" data-value="three-quarter">반측면</button>
+          <button class="chip" data-value="detail">클로즈업</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="section-title">추가 옵션</p>
+      <div class="check-group">
+        <label class="check-item">
+          <input type="checkbox" class="extra-opt" data-prompt="Keep embroidered logo details sharp, clean, and readable." />
+          자수 로고 선명하게
+        </label>
+        <label class="check-item">
+          <input type="checkbox" class="extra-opt" data-prompt="Render metal logo hardware accurately with clean edges and realistic highlights." />
+          로고 금속 장식 정확하게
+        </label>
+        <label class="check-item">
+          <input type="checkbox" class="extra-opt" data-prompt="Render fabric texture and natural folds accurately." />
+          텍스처 / 주름 강조
+        </label>
+        <label class="check-item">
+          <input type="checkbox" class="extra-opt" data-prompt="Emphasize clean, crisp product silhouette." />
+          실루엣 강조
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ 프롬프트 -->
+  <section class="content-section">
+    <div class="prompt-section-header">
+      <p class="section-heading" style="border-bottom:none;padding-bottom:0;margin-bottom:0;">생성 프롬프트</p>
+      <button class="btn btn-primary" id="generate-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>
+        </svg>
+        프롬프트 생성
+      </button>
+    </div>
+
+    <textarea id="prompt-output" placeholder="위에서 소재, 컬러, 디테일을 입력한 후 [프롬프트 생성]을 누르세요."></textarea>
+
+    <div class="prompt-footer">
+      <p class="prompt-status" id="prompt-status">소재, 디테일, 컬러를 입력한 뒤 프롬프트를 생성하세요.</p>
+      <div style="display:flex;align-items:center;">
+        <span class="copy-toast" id="copy-toast">복사됨!</span>
+        <button class="btn btn-outline" id="copy-btn" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          복사
+        </button>
+      </div>
+    </div>
+  </section>
+
+  </div><!-- /col-right -->
+
+</div><!-- /main-content -->
+
+<script>
+/* ═══════════════════════════════════════════════
+   1. 상수 / 매핑 테이블
+═══════════════════════════════════════════════ */
+const MAX_IMAGES = 5;
+
+const FIELD_PLACEHOLDERS = {
+  material:    '예: 100% 린넨, 울 혼방, 가죽...',
+  detail:      '예: 오버핏, 드롭숄더, 사이드 슬릿, 자수 로고...',
+  'color-text':'예: 오프화이트, 버건디, 네이비...',
+};
+
+const CUT_VIEW = {
+  'front':         'Front',
+  'back':          'Back',
+  'three-quarter': 'Three-quarter',
+  'detail':        'Detail close-up',
+};
+
+const BG_HEX = {
+  'white':      '#ffffff',
+  'light-gray': '#efefef',
+  'soft-gray':  '#f5f5f5',
+};
+
+/* ═══════════════════════════════════════════════
+   2. 이미지 슬롯 초기화
+═══════════════════════════════════════════════ */
+const uploadArea       = document.getElementById('upload-area');
+const imgCountEl       = document.getElementById('img-count');
+const analyzeBtn       = document.getElementById('analyze-btn');
+const analysisScopeEls = document.querySelectorAll('input[name="analysis-scope"]');
+const images           = new Array(MAX_IMAGES).fill(null);
+let translationCache   = null;
+
+function updateCount() {
+  imgCountEl.textContent = images.filter(Boolean).length;
+  updateAnalyzeControls();
+}
+
+function updateAnalyzeControls(isAnalyzing = false) {
+  analyzeBtn.disabled = !Boolean(images[0]) || isAnalyzing;
+  analysisScopeEls.forEach(input => { input.disabled = isAnalyzing; });
+}
+
+function getAnalysisScope() {
+  return document.querySelector('input[name="analysis-scope"]:checked')?.value || 'primary';
+}
+
+function getSlotReference(index) {
+  if (index === 0) return 'Primary full product image';
+  return document.getElementById(`detail-ref-${index}`)?.value.trim() || `Detail reference image from slot ${index + 1}`;
+}
+
+function getAnalysisItems() {
+  if (getAnalysisScope() === 'primary') {
+    return images[0] ? [{ ...images[0], index: 0, note: getSlotReference(0) }] : [];
+  }
+  return images
+    .map((item, index) => item ? { ...item, index, note: getSlotReference(index) } : null)
+    .filter(Boolean);
+}
+
+async function analyzeCurrentImages() {
+  const items = getAnalysisItems();
+  if (!items.length) {
+    showBanner('error', '분석할 이미지를 먼저 업로드해 주세요.');
+    setTimeout(hideBanner, 3000);
+    return;
+  }
+  await analyzeImageWithClaude(items);
+}
+
+async function setImageAtSlot(index, file) {
+  if (images[index]?.url) URL.revokeObjectURL(images[index].url);
+  const url = URL.createObjectURL(file);
+  images[index] = { file, url };
+  document.getElementById(`thumb-img-${index}`).src = url;
+  document.getElementById(`thumb-${index}`).classList.add('has-image');
+  updateCount();
+  saveImages();
+}
+
+async function addDroppedImages(fileList) {
+  const files = [...fileList].filter(f => f.type.startsWith('image/'));
+  if (!files.length) {
+    showBanner('error', '이미지 파일만 업로드할 수 있습니다.');
+    setTimeout(hideBanner, 3000);
+    return;
+  }
+  let added = 0;
+  for (const file of files) {
+    const index = images.findIndex(item => !item);
+    if (index === -1) break;
+    await setImageAtSlot(index, file);
+    added++;
+  }
+  if (added < files.length) {
+    showBanner('error', '이미지는 최대 5장까지 업로드할 수 있습니다.');
+    setTimeout(hideBanner, 3000);
+  }
+}
+
+const UPLOAD_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`;
+
+const DETAIL_PLACEHOLDERS = [
+  '자수 로고 디테일 참고',
+  '금속 로고 장식 참고',
+  '원단 텍스처 / 주름 참고',
+  '봉제 / 마감 디테일 참고',
+];
+
+function createUploadSlot(i) {
+  const slot = document.createElement('div');
+  slot.className = 'upload-slot';
+  slot.innerHTML = `
+    <label for="img-input-${i}">${UPLOAD_SVG}</label>
+    <input type="file" id="img-input-${i}" accept="image/*" />
+    <div class="thumb-wrap" id="thumb-${i}">
+      <img id="thumb-img-${i}" src="" alt="미리보기 ${i + 1}" />
+      <button class="del-btn" data-index="${i}" title="삭제">✕</button>
+    </div>
+  `;
+  slot.querySelector(`#img-input-${i}`).addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await setImageAtSlot(i, file);
+    e.target.value = '';
+  });
+  slot.querySelector('.del-btn').addEventListener('click', () => {
+    if (images[i]?.url) URL.revokeObjectURL(images[i].url);
+    images[i] = null;
+    document.getElementById(`thumb-${i}`).classList.remove('has-image');
+    document.getElementById(`thumb-img-${i}`).src = '';
+    updateCount();
+    saveImages();
+  });
+  return slot;
+}
+
+/* 슬롯 1 — 메인 */
+const mainSection = document.createElement('div');
+const mainLbl = document.createElement('p');
+mainLbl.className = 'slot-label';
+mainLbl.textContent = '메인 이미지';
+const mainSlot = createUploadSlot(0);
+mainSlot.classList.add('upload-slot-main');
+mainSection.appendChild(mainLbl);
+mainSection.appendChild(mainSlot);
+uploadArea.appendChild(mainSection);
+
+/* 슬롯 2~5 — 디테일 */
+const detailSection = document.createElement('div');
+detailSection.className = 'upload-detail-section';
+
+for (let i = 1; i < MAX_IMAGES; i++) {
+  const row = document.createElement('div');
+  row.className = 'slot-detail-row';
+
+  const thumbCol = document.createElement('div');
+  thumbCol.className = 'slot-detail-thumb-col';
+  const lbl = document.createElement('p');
+  lbl.className = 'slot-label';
+  lbl.textContent = `디테일 ${i}`;
+  const detailSlot = createUploadSlot(i);
+  detailSlot.classList.add('upload-slot-detail');
+  thumbCol.appendChild(lbl);
+  thumbCol.appendChild(detailSlot);
+
+  const refInput = document.createElement('input');
+  refInput.type = 'text';
+  refInput.id = `detail-ref-${i}`;
+  refInput.className = 'detail-ref-input';
+  refInput.placeholder = DETAIL_PLACEHOLDERS[i - 1];
+
+  row.appendChild(thumbCol);
+  row.appendChild(refInput);
+  detailSection.appendChild(row);
+}
+
+uploadArea.appendChild(detailSection);
+
+['dragenter', 'dragover'].forEach(ev => {
+  uploadArea.addEventListener(ev, (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+});
+['dragleave', 'drop'].forEach(ev => {
+  uploadArea.addEventListener(ev, (e) => { e.preventDefault(); uploadArea.classList.remove('drag-over'); });
+});
+uploadArea.addEventListener('drop', async (e) => { await addDroppedImages(e.dataTransfer.files); });
+
+analyzeBtn.addEventListener('click', async () => {
+  if (!images[0]?.file) {
+    showBanner('error', '먼저 첫 번째 슬롯에 이미지를 업로드해 주세요.');
+    setTimeout(hideBanner, 3000);
+    return;
+  }
+  await analyzeCurrentImages();
+});
+
+/* ═══════════════════════════════════════════════
+   3. 칩 / 컬러칩 선택
+═══════════════════════════════════════════════ */
+function bindSingleChip(groupId) {
+  const group = document.getElementById(groupId);
+  group.querySelectorAll('.chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      saveState();
+    });
+  });
+}
+bindSingleChip('category-group');
+bindSingleChip('cut-group');
+
+document.getElementById('bg-group').querySelectorAll('.color-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('bg-group').querySelectorAll('.color-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('custom-bg').value = '';
+    saveState();
+  });
+});
+
+document.getElementById('custom-bg').addEventListener('input', (e) => {
+  if (e.target.value.trim()) {
+    document.getElementById('bg-group').querySelectorAll('.color-chip').forEach(b => b.classList.remove('active'));
+  }
+});
+
+/* ═══════════════════════════════════════════════
+   4. 눈 아이콘 토글
+═══════════════════════════════════════════════ */
+document.querySelectorAll('.eye-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = document.getElementById(btn.dataset.target);
+    target.type = target.type === 'password' ? 'text' : 'password';
+  });
+});
+
+/* ═══════════════════════════════════════════════
+   5. API 키 — localStorage
+═══════════════════════════════════════════════ */
+function loadKeys() {
+  const ck = localStorage.getItem('claude_api_key') || '';
+  document.getElementById('claude-key').value = ck;
+  setKeyStatus('claude-dot', 'claude-status', ck);
+}
+function setKeyStatus(dotId, statusId, value) {
+  const dot       = document.getElementById(dotId);
+  const lbl       = document.getElementById(statusId);
+  const headerDot = document.getElementById('api-header-dot');
+  if (value) {
+    dot.classList.add('saved');
+    lbl.textContent = '저장됨';
+    headerDot?.classList.add('saved');
+  } else {
+    dot.classList.remove('saved');
+    lbl.textContent = '미입력';
+    headerDot?.classList.remove('saved');
+  }
+}
+document.getElementById('save-keys-btn').addEventListener('click', () => {
+  const ck = document.getElementById('claude-key').value.trim();
+  if (ck) localStorage.setItem('claude_api_key', ck);
+  else    localStorage.removeItem('claude_api_key');
+  setKeyStatus('claude-dot', 'claude-status', ck);
+});
+loadKeys();
+
+/* ═══════════════════════════════════════════════
+   6. API 드롭다운 토글
+═══════════════════════════════════════════════ */
+const apiToggleBtn = document.getElementById('api-toggle-btn');
+const apiDropdown  = document.getElementById('api-dropdown');
+
+apiToggleBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  apiDropdown.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('api-dropdown-wrap').contains(e.target)) {
+    apiDropdown.classList.remove('open');
+  }
+});
+
+/* ═══════════════════════════════════════════════
+   7. 분석 배너 헬퍼
+═══════════════════════════════════════════════ */
+const banner     = document.getElementById('analysis-banner');
+const spinner    = document.getElementById('analysis-spinner');
+const bannerText = document.getElementById('banner-text');
+
+function showBanner(type, message) {
+  banner.className = `analysis-banner ${type}`;
+  bannerText.textContent = message;
+  spinner.style.display = type === 'loading' ? 'block' : 'none';
+}
+function hideBanner() {
+  banner.className = 'analysis-banner';
+  bannerText.textContent = '';
+  spinner.style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════
+   8. 필드 분석 상태
+═══════════════════════════════════════════════ */
+function setFieldsAnalyzing(on) {
+  updateAnalyzeControls(on);
+  ['material', 'detail', 'color-text'].forEach(id => {
+    const el = document.getElementById(id);
+    if (on) {
+      el.classList.add('analyzing');
+      el.placeholder = '분석 중...';
+      el.disabled = true;
+    } else {
+      el.classList.remove('analyzing');
+      el.placeholder = FIELD_PLACEHOLDERS[id];
+      el.disabled = false;
+    }
+  });
+  document.getElementById('generate-btn').disabled = on;
+}
+
+/* ═══════════════════════════════════════════════
+   9. 이미지 → base64
+═══════════════════════════════════════════════ */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   10. Claude API 이미지 분석
+═══════════════════════════════════════════════ */
+async function analyzeImageWithClaude(items) {
+  const apiKey = localStorage.getItem('claude_api_key');
+  if (!apiKey) {
+    showBanner('error', 'Claude API 키를 먼저 저장해 주세요.');
+    setTimeout(hideBanner, 3000);
+    return;
+  }
+
+  setFieldsAnalyzing(true);
+  showBanner('loading', `Claude AI가 이미지 ${items.length}장을 분석 중입니다...`);
+
+  try {
+    const imageContent = [];
+    for (const item of items) {
+      const base64 = await fileToBase64(item.file);
+      const mediaType = item.file.type || 'image/jpeg';
+      imageContent.push({ type: 'text', text: `Slot ${item.index + 1}: ${item.note}` });
+      imageContent.push({ type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } });
+    }
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: `You are a fashion product analyst. Analyze the product image and extract exactly in Korean:
+1. material: fabric or material type
+2. details: key design details
+3. color: color tone description
+If multiple images are provided, use Slot 1 as the primary full product reference and use Slots 2-5 as detail references according to their labels.
+Respond in Korean JSON only: {"material": "", "details": "", "color": ""}`,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analyze these product images and consolidate the result.' },
+            ...imageContent,
+          ],
+        }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `API 오류 (${res.status})`);
+    }
+
+    const data  = await res.json();
+    const text  = data.content?.[0]?.text || '';
+    const match = text.match(/\{[\s\S]*?\}/);
+    if (!match) throw new Error('분석 결과를 파싱할 수 없습니다.');
+
+    const result = JSON.parse(match[0]);
+    document.getElementById('material').value   = result.material || '';
+    document.getElementById('detail').value     = result.details  || '';
+    document.getElementById('color-text').value = result.color    || '';
+    translationCache = null;
+
+    showBanner('success', '분석 완료! 필드가 자동으로 채워졌습니다.');
+    setTimeout(hideBanner, 2500);
+
+  } catch (err) {
+    console.error('[Claude 분석 오류]', err);
+    showBanner('error', `분석 실패: ${err.message}`);
+    setTimeout(hideBanner, 4000);
+  } finally {
+    setFieldsAnalyzing(false);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   11. 프롬프트 빌더
+═══════════════════════════════════════════════ */
+function getActiveChip(groupId) {
+  const el = document.querySelector(`#${groupId} .active`);
+  return el ? el.dataset.value : '';
+}
+
+function getBackgroundValue() {
+  const custom = document.getElementById('custom-bg').value.trim();
+  if (custom) return custom.startsWith('#') ? custom : `#${custom}`;
+  const bg = getActiveChip('bg-group') || 'white';
+  return BG_HEX[bg] || '#ffffff';
+}
+
+function setPromptStatus(message, type = '') {
+  const status = document.getElementById('prompt-status');
+  status.textContent = message;
+  status.className = `prompt-status ${type}`.trim();
+}
+
+function setCopyEnabled(on) {
+  document.getElementById('copy-btn').disabled = !on;
+}
+
+function validatePromptInputs() {
+  const missing = [];
+  if (!document.getElementById('material').value.trim()) missing.push('소재');
+  if (!document.getElementById('detail').value.trim())   missing.push('최종 디테일 설명');
+  if (!document.getElementById('color-text').value.trim()) missing.push('컬러');
+  return missing;
+}
+
+function getPromptSourceValues() {
+  return {
+    material: document.getElementById('material').value.trim(),
+    detail:   document.getElementById('detail').value.trim(),
+    color:    document.getElementById('color-text').value.trim(),
+  };
+}
+
+async function translatePromptFieldsToEnglish(values) {
+  const sourceKey = JSON.stringify(values);
+  if (translationCache?.sourceKey === sourceKey) return translationCache.values;
+
+  const apiKey = localStorage.getItem('claude_api_key');
+  if (!apiKey) throw new Error('Claude API 키를 먼저 저장해 주세요.');
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      system: `Translate Korean fashion product attributes into concise English phrases for an image generation prompt.
+Respond in JSON only: {"material": "", "details": "", "color": ""}`,
+      messages: [{
+        role: 'user',
+        content: [{ type: 'text', text: `material: ${values.material}\ndetails: ${values.detail}\ncolor: ${values.color}` }],
+      }],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `영문 변환 오류 (${res.status})`);
+  }
+
+  const data  = await res.json();
+  const text  = data.content?.[0]?.text || '';
+  const match = text.match(/\{[\s\S]*?\}/);
+  if (!match) throw new Error('영문 변환 결과를 파싱할 수 없습니다.');
+
+  const result = JSON.parse(match[0]);
+  const translated = {
+    material: result.material || values.material,
+    detail:   result.details  || values.detail,
+    color:    result.color    || values.color,
+  };
+  translationCache = { sourceKey, values: translated };
+  return translated;
+}
+
+function buildPrompt(values) {
+  const category = getActiveChip('category-group') || 'clothing';
+  const cut      = getActiveChip('cut-group')      || 'front';
+  const bg       = getBackgroundValue();
+  const cutView  = CUT_VIEW[cut] || cut;
+  const { material, detail, color } = values;
+
+  const extras = [...document.querySelectorAll('.extra-opt:checked')].map(cb => cb.dataset.prompt);
+
+  let lines;
+
+  if (category === 'clothing') {
+    lines = [
+      `Product retouching shot. Remove the existing background completely and replace with a solid ${bg} background.`,
+      `The garment is hanging on a hanger, ${cutView} view, centered composition.`,
+      `Retouch and clean up the garment: remove all wrinkles, creases, and folds. Make the fabric look smooth, flat, and neatly pressed while maintaining a natural hanging drape.`,
+      `Relight with soft, even studio lighting from the front. No shadows on the background.`,
+      `Material: ${material}. Color: ${color}. Key details: ${detail}.`,
+      `Preserve the exact silhouette, design, and proportions of the garment.`,
+      `Do not change the clothing structure, pattern, or color in any way.`,
+      `The hanger should not be visible. Show only the garment floating or with hanger hidden/cropped out.`,
+      `Preserve the exact neckline shape from the reference image accurately. Do not alter the neckline design.`,
+      `Any brand logo or emblem must be small and subtle, exactly as shown in the reference. Do not enlarge or exaggerate the logo.`,
+      `Professional e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
+      ...extras,
+    ];
+  } else {
+    lines = [
+      `Remove the existing background completely and replace with a solid ${bg} background.`,
+      `Keep the product exactly as shown, ${cutView} view, centered composition.`,
+      `Relight with soft, even studio lighting. Subtle shadow beneath the product only.`,
+      `Material: ${material}. Color: ${color}. Key details: ${detail}.`,
+      `Preserve exact product shape, proportions, surface texture, and logo detail accurately.`,
+      `Ensure logo remains sharp and clearly readable.`,
+      `Clean e-commerce product shot. No stylization, no artistic effects.`,
+      ...extras,
+    ];
+  }
+
+  return lines.join('\n');
+}
+
+document.getElementById('generate-btn').addEventListener('click', async () => {
+  const missing = validatePromptInputs();
+  if (missing.length) {
+    setCopyEnabled(false);
+    setPromptStatus(`${missing.join(', ')} 입력 후 프롬프트를 생성하세요.`, 'error');
+    return;
+  }
+
+  const generateBtn = document.getElementById('generate-btn');
+  generateBtn.disabled = true;
+  setCopyEnabled(false);
+  setPromptStatus('한글 입력값을 영문 프롬프트용으로 변환 중입니다...', '');
+
+  try {
+    const translated = await translatePromptFieldsToEnglish(getPromptSourceValues());
+    document.getElementById('prompt-output').value = buildPrompt(translated);
+    setCopyEnabled(true);
+    setPromptStatus('영문 프롬프트가 생성되었습니다.', 'success');
+    saveState();
+  } catch (err) {
+    setPromptStatus(`프롬프트 생성 실패: ${err.message}`, 'error');
+  } finally {
+    generateBtn.disabled = false;
+  }
+});
+
+/* ═══════════════════════════════════════════════
+   12. 복사 버튼
+═══════════════════════════════════════════════ */
+document.getElementById('copy-btn').addEventListener('click', () => {
+  const text = document.getElementById('prompt-output').value;
+  if (!text) {
+    setPromptStatus('복사할 프롬프트가 없습니다.', 'error');
+    setCopyEnabled(false);
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    const toast = document.getElementById('copy-toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1800);
+    setPromptStatus('프롬프트가 복사되었습니다.', 'success');
+  });
+});
+
+/* ═══════════════════════════════════════════════
+   13. 전체 초기화
+═══════════════════════════════════════════════ */
+function resetAll() {
+  for (let i = 0; i < MAX_IMAGES; i++) {
+    if (images[i]?.url) URL.revokeObjectURL(images[i].url);
+    images[i] = null;
+    document.getElementById(`thumb-${i}`)?.classList.remove('has-image');
+    const img = document.getElementById(`thumb-img-${i}`);
+    if (img) img.src = '';
+  }
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById(`detail-ref-${i}`);
+    if (el) el.value = '';
+  }
+  ['material', 'detail', 'color-text'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('custom-bg').value = '';
+  document.getElementById('prompt-output').value = '';
+  localStorage.removeItem('ppb_state');
+  localStorage.removeItem('ppb_images');
+  translationCache = null;
+  updateCount();
+  setCopyEnabled(false);
+  setPromptStatus('소재, 디테일, 컬러를 입력한 뒤 프롬프트를 생성하세요.');
+  hideBanner();
+}
+document.getElementById('reset-all-btn').addEventListener('click', resetAll);
+
+/* ═══════════════════════════════════════════════
+   14. 상태 저장 / 복원 (localStorage)
+═══════════════════════════════════════════════ */
+const LS_STATE  = 'ppb_state';
+const LS_IMAGES = 'ppb_images';
+
+let _saveTimer = null;
+function debouncedSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(saveState, 500);
+}
+
+function saveState() {
+  try {
+    const state = {
+      material:   document.getElementById('material').value,
+      detail:     document.getElementById('detail').value,
+      color:      document.getElementById('color-text').value,
+      detailRefs: [1,2,3,4].map(i => document.getElementById(`detail-ref-${i}`)?.value || ''),
+      category:   getActiveChip('category-group'),
+      cut:        getActiveChip('cut-group'),
+      bgChip:     document.querySelector('#bg-group .color-chip.active')?.dataset.value || '',
+      bgCustom:   document.getElementById('custom-bg').value,
+      extras:     [...document.querySelectorAll('.extra-opt')].map(cb => cb.checked),
+      prompt:     document.getElementById('prompt-output').value,
+    };
+    localStorage.setItem(LS_STATE, JSON.stringify(state));
+  } catch (_) {}
+}
+
+async function saveImages() {
+  try {
+    const serialized = await Promise.all(
+      images.map(item => {
+        if (!item?.file) return Promise.resolve(null);
+        return new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload  = () => resolve({ dataUrl: reader.result, mediaType: item.file.type || 'image/jpeg' });
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(item.file);
+        });
+      })
+    );
+    localStorage.setItem(LS_IMAGES, JSON.stringify(serialized));
+  } catch (_) {}
+}
+
+function _restoreChip(groupId, value) {
+  if (!value) return;
+  document.querySelectorAll(`#${groupId} .chip`).forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === value);
+  });
+}
+
+function _restoreColorChip(value) {
+  if (!value) return;
+  document.querySelectorAll('#bg-group .color-chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === value);
+  });
+}
+
+async function restoreImages(saved) {
+  for (let i = 0; i < MAX_IMAGES; i++) {
+    if (!saved[i]) continue;
+    try {
+      const { dataUrl, mediaType } = saved[i];
+      const res  = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `image_${i}`, { type: mediaType });
+      if (images[i]?.url) URL.revokeObjectURL(images[i].url);
+      const url = URL.createObjectURL(file);
+      images[i] = { file, url };
+      document.getElementById(`thumb-img-${i}`).src = url;
+      document.getElementById(`thumb-${i}`).classList.add('has-image');
+    } catch (_) {}
+  }
+  updateCount();
+}
+
+async function restoreState() {
+  try {
+    const raw = localStorage.getItem(LS_STATE);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s.material)  document.getElementById('material').value   = s.material;
+      if (s.detail)    document.getElementById('detail').value     = s.detail;
+      if (s.color)     document.getElementById('color-text').value = s.color;
+      (s.detailRefs || []).forEach((val, i) => {
+        const el = document.getElementById(`detail-ref-${i + 1}`);
+        if (el && val) el.value = val;
+      });
+      if (s.category) _restoreChip('category-group', s.category);
+      if (s.cut)      _restoreChip('cut-group', s.cut);
+      if (s.bgChip)   _restoreColorChip(s.bgChip);
+      if (s.bgCustom) document.getElementById('custom-bg').value = s.bgCustom;
+      if (Array.isArray(s.extras)) {
+        const cbs = [...document.querySelectorAll('.extra-opt')];
+        s.extras.forEach((checked, i) => { if (cbs[i]) cbs[i].checked = checked; });
+      }
+      if (s.prompt) {
+        document.getElementById('prompt-output').value = s.prompt;
+        setCopyEnabled(true);
+      }
+    }
+  } catch (_) {}
+
+  try {
+    const rawImg = localStorage.getItem(LS_IMAGES);
+    if (rawImg) await restoreImages(JSON.parse(rawImg));
+  } catch (_) {}
+}
+
+/* 텍스트 필드 자동 저장 */
+['material', 'detail', 'color-text', 'detail-ref-1', 'detail-ref-2', 'detail-ref-3', 'detail-ref-4']
+  .forEach(id => { document.getElementById(id)?.addEventListener('input', debouncedSave); });
+
+document.getElementById('custom-bg').addEventListener('input', debouncedSave);
+document.querySelectorAll('.extra-opt').forEach(cb => cb.addEventListener('change', saveState));
+
+restoreState();
+</script>
+</body>
+</html>
