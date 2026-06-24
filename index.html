@@ -1169,8 +1169,11 @@ Respond in Korean JSON only: {"material": "", "details": "", "color": ""}`,
 
     const data  = await res.json();
     const text  = data.content?.[0]?.text || '';
-    const match = text.match(/\{[\s\S]*?\}/);
-    if (!match) throw new Error('분석 결과를 파싱할 수 없습니다.');
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+      console.error('[분석 원본 응답]', text);
+      throw new Error('분석 결과를 파싱할 수 없습니다.');
+    }
 
     const result = JSON.parse(match[0]);
     document.getElementById('material').value   = result.material || '';
@@ -1265,7 +1268,7 @@ Respond in JSON only: {"material": "", "details": "", "color": ""}`,
 
   const data  = await res.json();
   const text  = data.content?.[0]?.text || '';
-  const match = text.match(/\{[\s\S]*?\}/);
+  const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('영문 변환 결과를 파싱할 수 없습니다.');
 
   const result = JSON.parse(match[0]);
