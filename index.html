@@ -1129,7 +1129,7 @@ async function analyzeImageWithClaude(items) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
+        max_tokens: 1500,
         system: `You are an expert fashion product analyst specializing in e-commerce product photography. Analyze the provided product images in detail and extract the following in Korean:
 
 1. material: Describe the fabric or material composition in detail. Include texture, weight, finish (e.g. 광택있는, 매트한, 부드러운), and any mixed materials. Be specific (e.g. '100% 코튼 저지, 부드럽고 가벼운 텍스처' not just '코튼').
