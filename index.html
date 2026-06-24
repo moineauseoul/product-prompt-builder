@@ -1295,18 +1295,22 @@ function buildPrompt(values) {
   let lines;
 
   if (category === 'clothing') {
+    const cleanDetail = detail
+      .replace(/\b(body|curves?|curve[ds]?|fitted?|body-hugging|body-contouring|body[-\s]?curve[ds]?)\b/gi, '')
+      .replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim().replace(/^,|,$/g, '').trim();
     lines = [
-      `Product retouching shot. Remove the existing background completely and replace with a solid ${bg} background.`,
-      `${cutView} view, centered composition. No hanger, no mannequin, no model, no hands, no props. The garment appears naturally arranged as a clean catalog product shot.`,
+      `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
+      `${cutView} view, centered straight-on composition. Clean catalog product shot. No hanger, no mannequin, no model, no hands, no props. The garment is neatly arranged and presented flat against the background, showing its natural shape and drape.`,
       `Retouch and clean up the garment: remove all wrinkles, creases, and folds. Make the fabric look smooth, flat, and neatly pressed while maintaining a natural hanging drape.`,
       `Relight with soft, even studio lighting from the front. No shadows on the background.`,
-      `Material: ${material}. Color: ${color}. Key details: ${detail}.`,
+      `Material: ${material}. Color: ${color}. Key details: ${cleanDetail}.`,
       `Preserve the exact silhouette, design, and proportions of the garment.`,
       `Do not change the clothing structure, pattern, or color in any way.`,
       `Preserve the exact neckline shape from the reference image accurately. Do not alter the neckline design.`,
       `Any brand logo or emblem must be small and subtle, exactly as shown in the reference. Do not enlarge or exaggerate the logo.`,
       `Professional e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
       ...extras,
+      `Present the garment as a flat lay or naturally hanging product shot — clean, minimal, and suitable for high-end e-commerce display.`,
     ];
   } else {
     lines = [
