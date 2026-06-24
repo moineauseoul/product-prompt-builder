@@ -653,7 +653,10 @@
     <div>
       <p class="section-title">카테고리</p>
       <div class="chip-group" id="category-group">
-        <button class="chip active" data-value="clothing">의류</button>
+        <button class="chip active" data-value="top">상의</button>
+        <button class="chip" data-value="pants">바지</button>
+        <button class="chip" data-value="skirt">스커트</button>
+        <button class="chip" data-value="outer">아우터</button>
         <button class="chip" data-value="accessory">악세</button>
       </div>
     </div>
@@ -1290,24 +1293,26 @@ Respond in JSON only: {"material": "", "details": "", "color": ""}`,
 }
 
 function buildPrompt(values) {
-  const category = getActiveChip('category-group') || 'clothing';
+  const category = getActiveChip('category-group') || 'top';
   const cut      = getActiveChip('cut-group')      || 'front';
   const bg       = getBackgroundValue();
   const cutView  = CUT_VIEW[cut] || cut;
-  const { material, detail, color } = values;
+  const { material, color } = values;
 
   const extras = [...document.querySelectorAll('.extra-opt:checked')].map(cb => cb.dataset.prompt);
 
+  /* 의류 카테고리 공통: body 관련 단어 제거 */
+  const cleanDetail = values.detail
+    .replace(/\b(body|curves?|curve[ds]?|fitted?|body-hugging|body-contouring|body[-\s]?curve[ds]?)\b/gi, '')
+    .replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim().replace(/^,|,$/g, '').trim();
+
   let lines;
 
-  if (category === 'clothing') {
-    const cleanDetail = detail
-      .replace(/\b(body|curves?|curve[ds]?|fitted?|body-hugging|body-contouring|body[-\s]?curve[ds]?)\b/gi, '')
-      .replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim().replace(/^,|,$/g, '').trim();
+  if (category === 'top') {
     lines = [
       `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
       `${cutView} view, centered straight-on composition. Clean catalog product shot. No hanger, no mannequin, no model, no hands, no props. The garment is displayed suspended in air, showing its natural shape and vertical drape as if hanging.`,
-      `Retouch and clean up the garment: remove all wrinkles, creases, and folds. Make the fabric look smooth, flat, and neatly pressed while maintaining a natural hanging drape.`,
+      `Retouch and clean up the garment: remove all wrinkles, creases, and folds. Make the fabric look smooth and neatly pressed while maintaining a natural hanging drape.`,
       `Relight with soft, even studio lighting from the front. No shadows on the background.`,
       `Material: ${material}. Color: ${color}. Key details: ${cleanDetail}.`,
       `Preserve the exact silhouette, design, and proportions of the garment.`,
@@ -1318,12 +1323,57 @@ function buildPrompt(values) {
       ...extras,
       `Present the garment as a naturally hanging product shot, floating in air — clean, minimal, and suitable for high-end e-commerce display. Not a flat lay.`,
     ];
+
+  } else if (category === 'pants') {
+    lines = [
+      `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
+      `${cutView} view, centered straight-on composition. Clean catalog product shot. No hanger, no mannequin, no model, no hands, no props. The pants are displayed flat, showing their natural silhouette and shape from the front.`,
+      `Remove excessive wrinkles but preserve the natural texture and character of the fabric. Keep center front and back creases crisp and clean.`,
+      `Relight with soft, even studio lighting from the front. No shadows on the background.`,
+      `Material: ${material}. Color: ${color}. Key details: ${cleanDetail}.`,
+      `Preserve the exact silhouette, design, and proportions of the garment.`,
+      `Do not change the clothing structure, pattern, or color in any way.`,
+      `Any brand logo or emblem must be small and subtle, exactly as shown in the reference. Do not enlarge or exaggerate the logo.`,
+      `Professional e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
+      ...extras,
+    ];
+
+  } else if (category === 'skirt') {
+    lines = [
+      `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
+      `${cutView} view, centered straight-on composition. Clean catalog product shot. No hanger, no mannequin, no model, no hands, no props. The skirt is displayed suspended in air, showing its natural drape and volume as if hanging.`,
+      `Retouch and clean up the garment but preserve natural fabric drape and flow. Keep pleats, gathers, and volume shapes intact.`,
+      `Relight with soft, even studio lighting from the front. Subtle natural shadow to emphasize volume and shape.`,
+      `Material: ${material}. Color: ${color}. Key details: ${cleanDetail}.`,
+      `Preserve the exact silhouette, design, and proportions of the garment.`,
+      `Do not change the clothing structure, pattern, or color in any way.`,
+      `Any brand logo or emblem must be small and subtle, exactly as shown in the reference. Do not enlarge or exaggerate the logo.`,
+      `Professional e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
+      ...extras,
+    ];
+
+  } else if (category === 'outer') {
+    lines = [
+      `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
+      `${cutView} view, centered straight-on composition. Clean catalog product shot. No hanger, no mannequin, no model, no hands, no props. The garment is displayed suspended in air, showing its natural shape and structured silhouette as if hanging.`,
+      `Retouch and clean up the garment: remove all wrinkles and creases. Make the fabric look smooth and neatly pressed while maintaining structured shape.`,
+      `Relight with soft, even studio lighting from the front. No shadows on the background.`,
+      `Material: ${material}. Color: ${color}. Key details: ${cleanDetail}.`,
+      `Preserve the exact silhouette, design, and proportions of the garment.`,
+      `Do not change the clothing structure, pattern, or color in any way.`,
+      `Preserve the exact collar and lapel shape from the reference image accurately.`,
+      `Any brand logo or emblem must be small and subtle, exactly as shown in the reference. Do not enlarge or exaggerate the logo.`,
+      `Professional e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
+      ...extras,
+    ];
+
   } else {
+    /* 악세 */
     lines = [
       `Remove the existing background completely and replace with a solid ${bg} background.`,
       `Keep the product exactly as shown, ${cutView} view, centered composition.`,
       `Relight with soft, even studio lighting. Subtle shadow beneath the product only.`,
-      `Material: ${material}. Color: ${color}. Key details: ${detail}.`,
+      `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`,
       `Preserve exact product shape, proportions, surface texture, and logo detail accurately.`,
       `Ensure logo remains sharp and clearly readable.`,
       `Clean e-commerce product shot. No stylization, no artistic effects.`,
