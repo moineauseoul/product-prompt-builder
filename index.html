@@ -1300,7 +1300,7 @@ function buildPrompt(values) {
       .replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim().replace(/^,|,$/g, '').trim();
     lines = [
       `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
-      `${cutView} view, centered straight-on composition. Clean catalog product shot. No hanger, no mannequin, no model, no hands, no props. The garment is neatly arranged and presented flat against the background, showing its natural shape and drape.`,
+      `${cutView} view, centered straight-on composition. Clean catalog product shot. No hanger, no mannequin, no model, no hands, no props. The garment is displayed suspended in air, showing its natural shape and vertical drape as if hanging.`,
       `Retouch and clean up the garment: remove all wrinkles, creases, and folds. Make the fabric look smooth, flat, and neatly pressed while maintaining a natural hanging drape.`,
       `Relight with soft, even studio lighting from the front. No shadows on the background.`,
       `Material: ${material}. Color: ${color}. Key details: ${cleanDetail}.`,
@@ -1310,7 +1310,7 @@ function buildPrompt(values) {
       `Any brand logo or emblem must be small and subtle, exactly as shown in the reference. Do not enlarge or exaggerate the logo.`,
       `Professional e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
       ...extras,
-      `Present the garment as a flat lay or naturally hanging product shot — clean, minimal, and suitable for high-end e-commerce display.`,
+      `Present the garment as a naturally hanging product shot, floating in air — clean, minimal, and suitable for high-end e-commerce display. Not a flat lay.`,
     ];
   } else {
     lines = [
