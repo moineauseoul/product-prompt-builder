@@ -1297,13 +1297,12 @@ function buildPrompt(values) {
   if (category === 'clothing') {
     lines = [
       `Product retouching shot. Remove the existing background completely and replace with a solid ${bg} background.`,
-      `The garment is hanging vertically on a clothes hanger, suspended in mid-air. ${cutView} view, centered composition. The fabric falls naturally downward with gravity, showing the natural vertical drape of a hanging garment — not laid flat.`,
+      `${cutView} view, centered composition. No hanger, no mannequin, no model, no hands, no props. The garment appears naturally arranged as a clean catalog product shot.`,
       `Retouch and clean up the garment: remove all wrinkles, creases, and folds. Make the fabric look smooth, flat, and neatly pressed while maintaining a natural hanging drape.`,
       `Relight with soft, even studio lighting from the front. No shadows on the background.`,
       `Material: ${material}. Color: ${color}. Key details: ${detail}.`,
       `Preserve the exact silhouette, design, and proportions of the garment.`,
       `Do not change the clothing structure, pattern, or color in any way.`,
-      `The hanger should not be visible. Show only the garment floating or with hanger hidden/cropped out.`,
       `Preserve the exact neckline shape from the reference image accurately. Do not alter the neckline design.`,
       `Any brand logo or emblem must be small and subtle, exactly as shown in the reference. Do not enlarge or exaggerate the logo.`,
       `Professional e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
