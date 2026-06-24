@@ -619,11 +619,11 @@
     <div class="analysis-controls">
       <div class="analysis-range" id="analysis-range">
         <label>
-          <input type="radio" name="analysis-scope" value="primary" checked />
+          <input type="radio" name="analysis-scope" value="primary" />
           슬롯 1만 분석
         </label>
         <label>
-          <input type="radio" name="analysis-scope" value="all" />
+          <input type="radio" name="analysis-scope" value="all" checked />
           전체 이미지 분석
         </label>
       </div>
@@ -1130,11 +1130,27 @@ async function analyzeImageWithClaude(items) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 500,
-        system: `You are a fashion product analyst. Analyze the product image and extract exactly in Korean:
-1. material: fabric or material type
-2. details: key design details
-3. color: color tone description
-If multiple images are provided, use Slot 1 as the primary full product reference and use Slots 2-5 as detail references according to their labels.
+        system: `You are an expert fashion product analyst specializing in e-commerce product photography. Analyze the provided product images in detail and extract the following in Korean:
+
+1. material: Describe the fabric or material composition in detail. Include texture, weight, finish (e.g. 광택있는, 매트한, 부드러운), and any mixed materials. Be specific (e.g. '100% 코튼 저지, 부드럽고 가벼운 텍스처' not just '코튼').
+
+2. details: List ALL key design details you can observe. Include:
+   - Silhouette and fit (e.g. 오버핏, 슬림핏)
+   - Neckline style (e.g. 크루넥, V넥, 보트넥)
+   - Sleeve type and length
+   - Closures (buttons, zippers, ties)
+   - Special design features (pleats, pintucks, slits, ruffles)
+   - Logo or branding details (location, type: embroidered/metal/printed)
+   - Hem and edge finishing details
+   - Any hardware or accessories
+
+3. color: Describe the color in detail including:
+   - Base color(s) with specific tone (e.g. 크림 아이보리, 더스티 핑크)
+   - Pattern if any (e.g. 가는 수평 스트라이프, 체크)
+   - Color combination if multicolor
+
+If multiple images are provided, use Slot 1 as the primary reference and extract additional details from Slots 2-5 to supplement the analysis.
+
 Respond in Korean JSON only: {"material": "", "details": "", "color": ""}`,
         messages: [{
           role: 'user',
