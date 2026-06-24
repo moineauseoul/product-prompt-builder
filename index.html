@@ -657,6 +657,7 @@
         <button class="chip active" data-value="top">상의</button>
         <button class="chip" data-value="pants">바지</button>
         <button class="chip" data-value="skirt">스커트</button>
+        <button class="chip" data-value="dress">드레스</button>
         <button class="chip" data-value="outer">아우터</button>
         <button class="chip" data-value="accessory">악세</button>
       </div>
@@ -1350,6 +1351,22 @@ function buildPrompt(values) {
       `Do not change the clothing structure, pattern, or color in any way.`,
       `Any brand logo or emblem must be small and subtle, exactly as shown in the reference. Do not enlarge or exaggerate the logo.`,
       `Professional e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
+      ...extras,
+    ];
+
+  } else if (category === 'dress') {
+    lines = [
+      `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
+      `${cutView} view, centered straight-on composition. Clean catalog product shot. No hanger, no mannequin, no model, no hands, no props. The dress is displayed suspended in air, showing its full length, natural shape and drape as if hanging.`,
+      `Retouch and clean up the garment but preserve natural fabric drape and flow. Remove excessive wrinkles while keeping the natural movement of the fabric intact.`,
+      `Relight with soft, even studio lighting from the front. Subtle natural shadow to emphasize volume and length.`,
+      `Material: ${material}. Color: ${color}. Key details: ${cleanDetail}.`,
+      `Preserve the exact silhouette, design, and full length proportions of the dress.`,
+      `Do not change the clothing structure, pattern, or color in any way.`,
+      `Preserve the exact neckline shape from the reference image accurately. Do not alter the neckline design.`,
+      `Any brand logo or emblem must be small and subtle, exactly as shown in the reference. Do not enlarge or exaggerate the logo.`,
+      `Professional e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
+      `Present the full-length dress as a naturally hanging product shot, floating in air — clean, minimal, and suitable for high-end e-commerce display. Not a flat lay.`,
       ...extras,
     ];
 
