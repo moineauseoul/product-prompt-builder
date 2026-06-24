@@ -502,7 +502,8 @@
     #prompt-output {
       width: 100%;
       flex: 1;
-      min-height: 0;
+      min-height: 120px;
+      overflow-y: auto;
       padding: 14px;
       border: 1.5px solid var(--gray-200);
       border-radius: var(--radius);
@@ -648,7 +649,7 @@
   <div class="col-right">
 
   <!-- ② 상품 정보 -->
-  <section class="content-section">
+  <section class="content-section" style="gap:28px;">
     <p class="section-heading">상품 정보</p>
     <div>
       <p class="section-title">카테고리</p>
@@ -685,7 +686,7 @@
   </section>
 
   <!-- ③ 촬영 설정 -->
-  <section class="content-section">
+  <section class="content-section" style="margin-top:12px;">
     <p class="section-heading">촬영 설정</p>
     <div class="field-row-2">
       <div>
@@ -708,7 +709,7 @@
       </div>
     </div>
 
-    <div>
+    <div style="margin-top:12px;">
       <p class="section-title">추가 옵션</p>
       <div class="check-group">
         <label class="check-item">
@@ -736,23 +737,23 @@
   </section>
 
   <!-- ④ 프롬프트 -->
-  <section class="content-section">
+  <section class="content-section" style="margin-top:12px;">
     <div class="prompt-section-header">
       <p class="section-heading" style="border-bottom:none;padding-bottom:0;margin-bottom:0;">생성 프롬프트</p>
-      <button class="btn btn-primary" id="generate-btn">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>
-        </svg>
-        프롬프트 생성
-      </button>
     </div>
 
     <textarea id="prompt-output" placeholder="위에서 소재, 컬러, 디테일을 입력한 후 [프롬프트 생성]을 누르세요."></textarea>
 
     <div class="prompt-footer">
       <p class="prompt-status" id="prompt-status">소재, 디테일, 컬러를 입력한 뒤 프롬프트를 생성하세요.</p>
-      <div style="display:flex;align-items:center;">
+      <div style="display:flex;align-items:center;gap:8px;">
         <span class="copy-toast" id="copy-toast">복사됨!</span>
+        <button class="btn btn-primary" id="generate-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>
+          </svg>
+          프롬프트 생성
+        </button>
         <button class="btn btn-outline" id="copy-btn" disabled>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
