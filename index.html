@@ -1505,11 +1505,12 @@ function buildPrompt(values) {
     lines = [
       `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
       `${cutView} view, centered composition. No mannequin, no model, no hands, no props.`,
-      `Retouch and clean up the bag: remove all wrinkles, creases, and deformations. Make the bag look smooth and perfectly shaped. Straighten and smooth out the handles — clean, taut, and naturally curved without kinks or bends.`,
+      `Lightly retouch the bag: remove only major wrinkles and deformations. Preserve natural fabric texture and slight surface variations — do not over-smooth or make it look too perfect. Straighten and smooth out the handles — clean, taut, and naturally curved without kinks or bends.`,
       `Relight with soft, even studio lighting. Subtle natural shadow beneath the product only.`,
       `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`,
       `Preserve exact product shape and proportions. Emphasize the woven fabric texture and material character accurately — not leather, show the actual fabric grain and weave pattern.`,
       `Ensure logo and hardware remain sharp and clearly readable.`,
+      `Preserve the exact position of all hardware, charms, and accessories as shown in the reference image. Do not relocate any hardware elements to different sides or positions.`,
       `Clean e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
       ...extras,
     ];
