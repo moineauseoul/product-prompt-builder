@@ -1069,6 +1069,7 @@ bindSingleChip('cut-group');
 /* ── 카테고리 대분류/소분류 ── */
 let _activeMajor = '';
 let _activeMinor = '';
+let _sheenLevel  = ''; // 가죽 광택 레벨: full_matte / semi_matte / semi_glossy / high_gloss
 
 function getActiveCategory() {
   if (_activeMajor === 'accessory') return 'accessory';
@@ -1106,6 +1107,7 @@ document.getElementById('category-main-group').querySelectorAll('.segment-btn').
     document.getElementById('category-main-group').querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     _activeMajor = btn.dataset.value;
+    _sheenLevel  = '';
     renderSubGroup(_activeMajor);
     saveState();
   });
@@ -1256,9 +1258,12 @@ function buildAnalysisSystemPrompt() {
   const CAT_FOCUS = {
     'bag-leather': `
 [Category focus — Leather Bag]
-- Leather gloss level (REQUIRED): examine highlight areas and edge reflections, then classify as one of:
-    full matte (suede/nubuck) / semi-matte (natural full-grain) / semi-glossy (smooth leather/calfskin) / high gloss (patent/coated)
-  Dark/black leather is especially prone to misidentification — examine carefully. Always include in material result (e.g. '세미글로시 스무스 레더').
+- Leather gloss level (REQUIRED): analyze highlight areas and edge reflections carefully, then set sheen_level in your JSON response to exactly one of:
+    full_matte   — no highlights at all (suede, nubuck)
+    semi_matte   — only faint highlights visible (natural full-grain leather)
+    semi_glossy  — soft reflections on curved surfaces (smooth leather, calfskin)
+    high_gloss   — strong reflections, mirror-like effect (patent leather, special coating)
+  Dark/black leather is especially prone to misidentification — carefully examine handle top surfaces and body curve highlights before deciding.
 - Hardware: metal tone (gold-tone/silver-tone/oxidised), exact position of each piece.
 - Strap/handle: structure, attachment method, adjustability.
 - Closure: type (zipper/magnetic snap/turn-lock/flap) and position.`,
@@ -1349,7 +1354,8 @@ Analyze the provided product images in detail and extract the following in Korea
 
 If multiple images are provided, use Slot 1 as the primary reference and extract additional details from Slots 2-5 to supplement the analysis.
 
-Respond in Korean JSON only: {"material": "", "details": "", "color": ""}`;
+Respond in Korean JSON only: {"material": "", "details": "", "color": "", "sheen_level": ""}
+sheen_level: set to one of full_matte / semi_matte / semi_glossy / high_gloss for leather products; empty string for all other products.`;
 }
 
 async function analyzeImageWithClaude(items) {
@@ -1412,6 +1418,7 @@ async function analyzeImageWithClaude(items) {
     document.getElementById('material').value   = result.material || '';
     document.getElementById('detail').value     = result.details  || '';
     document.getElementById('color-text').value = result.color    || '';
+    _sheenLevel      = result.sheen_level || '';
     translationCache = null;
 
     showBanner('success', '분석 완료! 필드가 자동으로 채워졌습니다.');
@@ -1610,12 +1617,20 @@ function buildPrompt(values) {
     ];
 
   } else if (category === 'bag-leather') {
+    const _isGlossy   = _sheenLevel === 'semi_glossy' || _sheenLevel === 'high_gloss';
+    const _isMatte    = _sheenLevel === 'full_matte'  || _sheenLevel === 'semi_matte';
+    const _glossLabel = _sheenLevel === 'high_gloss'  ? 'high-gloss' : 'semi-glossy';
     lines = [
       `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
       `${cutView} view, centered composition. No mannequin, no model, no hands, no props.`,
-      `Lightly retouch the bag: remove only major wrinkles and obvious deformations. Preserve natural leather/fabric character and subtle surface variations — maintain the bag's natural softness and volume, do not over-perfect or flatten the shape. Straighten and smooth out the handles — clean, taut, and naturally curved without kinks or bends.`,
+      _isGlossy
+        ? `Retouch to enhance leather surface quality. Actively render the ${_glossLabel} leather finish — add realistic specular highlights on handle top, body curves, and edge contours. The surface must NOT appear flat or matte.`
+        : `Lightly retouch the bag: remove only major wrinkles and obvious deformations. Preserve natural leather/fabric character and subtle surface variations — maintain the bag's natural softness and volume, do not over-perfect or flatten the shape. Straighten and smooth out the handles — clean, taut, and naturally curved without kinks or bends.`,
       `Relight with soft, even studio lighting. Subtle natural shadow beneath the product only.`,
-      `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`,
+      ...(_isGlossy ? [`IMPORTANT: This is a ${_glossLabel} leather bag. Visible sheen and specular highlights must be rendered clearly.`] : []),
+      _isMatte
+        ? `Material: ${material} (matte finish, no sheen). Color: ${color}. Key details: ${values.detail}.`
+        : `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`,
       `Preserve exact product shape, proportions, and leather texture accurately. Enhance leather surface quality — show realistic natural sheen, soft highlights, and smooth grain texture. Preserve the original leather finish (glossy/semi-glossy/matte) exactly as shown in the reference image.`,
       `Ensure logo and hardware remain sharp and clearly readable.`,
       `Clean e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
@@ -1733,6 +1748,7 @@ function resetAll() {
   document.getElementById('prompt-output').value = '';
   _activeMajor = '';
   _activeMinor = '';
+  _sheenLevel  = '';
   document.querySelectorAll('#category-main-group .segment-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('category-sub-wrap').classList.remove('visible');
   document.querySelectorAll('#cut-group .chip').forEach(b => b.classList.remove('active'));
