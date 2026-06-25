@@ -659,6 +659,9 @@
         <button class="chip" data-value="skirt">스커트</button>
         <button class="chip" data-value="dress">드레스</button>
         <button class="chip" data-value="outer">아우터</button>
+        <button class="chip" data-value="bag-leather">가방(가죽)</button>
+        <button class="chip" data-value="bag-fabric">가방(패브릭)</button>
+        <button class="chip" data-value="bag-fur">가방(퍼·페더)</button>
         <button class="chip" data-value="accessory">악세</button>
       </div>
     </div>
@@ -1382,6 +1385,45 @@ function buildPrompt(values) {
       `Preserve the exact collar and lapel shape from the reference image accurately.`,
       `Any brand logo or emblem must be small and subtle, exactly as shown in the reference. Do not enlarge or exaggerate the logo.`,
       `Professional e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
+      ...extras,
+    ];
+
+  } else if (category === 'bag-leather') {
+    lines = [
+      `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
+      `${cutView} view, centered composition. No mannequin, no model, no hands, no props.`,
+      `Retouch and clean up the bag: remove all wrinkles, creases, and deformations. Make the bag look smooth and perfectly shaped. Straighten and smooth out the handles — clean, taut, and naturally curved without kinks or bends.`,
+      `Relight with soft, even studio lighting. Subtle natural shadow beneath the product only.`,
+      `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`,
+      `Preserve exact product shape, proportions, and leather texture accurately. Enhance leather surface quality — show realistic highlights, natural sheen, and grain texture.`,
+      `Ensure logo and hardware remain sharp and clearly readable.`,
+      `Clean e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
+      ...extras,
+    ];
+
+  } else if (category === 'bag-fabric') {
+    lines = [
+      `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
+      `${cutView} view, centered composition. No mannequin, no model, no hands, no props.`,
+      `Retouch and clean up the bag: remove all wrinkles, creases, and deformations. Make the bag look smooth and perfectly shaped. Straighten and smooth out the handles — clean, taut, and naturally curved without kinks or bends.`,
+      `Relight with soft, even studio lighting. Subtle natural shadow beneath the product only.`,
+      `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`,
+      `Preserve exact product shape and proportions. Emphasize the woven fabric texture and material character accurately — not leather, show the actual fabric grain and weave pattern.`,
+      `Ensure logo and hardware remain sharp and clearly readable.`,
+      `Clean e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
+      ...extras,
+    ];
+
+  } else if (category === 'bag-fur') {
+    lines = [
+      `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
+      `${cutView} view, centered composition. No mannequin, no model, no hands, no props.`,
+      `Minimal retouching only — do NOT flatten or smooth the fur/feather texture. Preserve all volume, fluffiness, and natural movement of the fur or feathers.`,
+      `Relight with soft, even studio lighting to show depth and volume of the fur/feather material.`,
+      `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`,
+      `Preserve exact product shape and the natural voluminous texture of the fur/feather material.`,
+      `Ensure logo and hardware remain sharp and clearly readable.`,
+      `Clean e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
       ...extras,
     ];
 
