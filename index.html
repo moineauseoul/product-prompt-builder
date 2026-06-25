@@ -1625,7 +1625,7 @@ function resetAll() {
   document.querySelectorAll('#cut-group .chip').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('#bg-group .color-chip').forEach(b => b.classList.remove('active'));
   localStorage.removeItem('ppb_state');
-  localStorage.removeItem('ppb_images');
+  clearSavedImages();
   translationCache = null;
   updateCount();
   setCopyEnabled(false);
@@ -1637,8 +1637,24 @@ document.getElementById('reset-all-btn').addEventListener('click', resetAll);
 /* ═══════════════════════════════════════════════
    14. 상태 저장 / 복원 (localStorage)
 ═══════════════════════════════════════════════ */
-const LS_STATE  = 'ppb_state';
-const LS_IMAGES = 'ppb_images';
+const LS_STATE = 'ppb_state';
+
+/* ── IndexedDB for images (localStorage quota-safe) ── */
+const IDB_NAME    = 'ppb_db';
+const IDB_STORE   = 'images';
+const IDB_VERSION = 1;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = e => {
+      if (!e.target.result.objectStoreNames.contains(IDB_STORE))
+        e.target.result.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
 
 let _saveTimer = null;
 function debouncedSave() {
@@ -1662,18 +1678,23 @@ function saveState() {
 
 async function saveImages() {
   try {
-    const serialized = await Promise.all(
-      images.map(item => {
-        if (!item?.file) return Promise.resolve(null);
-        return new Promise(resolve => {
-          const reader = new FileReader();
-          reader.onload  = () => resolve({ dataUrl: reader.result, mediaType: item.file.type || 'image/jpeg' });
-          reader.onerror = () => resolve(null);
-          reader.readAsDataURL(item.file);
-        });
-      })
-    );
-    localStorage.setItem(LS_IMAGES, JSON.stringify(serialized));
+    const db = await openDB();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    for (let i = 0; i < MAX_IMAGES; i++) {
+      if (images[i]?.file) store.put(images[i].file, i);
+      else                  store.delete(i);
+    }
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = e => rej(e.target.error); });
+  } catch (err) { console.warn('[saveImages]', err); }
+}
+
+async function clearSavedImages() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).clear();
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = e => rej(e.target.error); });
   } catch (_) {}
 }
 
@@ -1691,21 +1712,31 @@ function _restoreColorChip(value) {
   });
 }
 
-async function restoreImages(saved) {
-  for (let i = 0; i < MAX_IMAGES; i++) {
-    if (!saved[i]) continue;
-    try {
-      const { dataUrl, mediaType } = saved[i];
-      const res  = await fetch(dataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], `image_${i}`, { type: mediaType });
+async function restoreImages() {
+  try {
+    const db    = await openDB();
+    const tx    = db.transaction(IDB_STORE, 'readonly');
+    const store = tx.objectStore(IDB_STORE);
+    const keys  = await new Promise((res, rej) => {
+      const r = store.getAllKeys();
+      r.onsuccess = e => res(e.target.result);
+      r.onerror   = e => rej(e.target.error);
+    });
+    for (const i of keys) {
+      if (i < 0 || i >= MAX_IMAGES) continue;
+      const file = await new Promise((res, rej) => {
+        const r = store.get(i);
+        r.onsuccess = e => res(e.target.result);
+        r.onerror   = e => rej(e.target.error);
+      });
+      if (!file) continue;
       if (images[i]?.url) URL.revokeObjectURL(images[i].url);
       const url = URL.createObjectURL(file);
       images[i] = { file, url };
       document.getElementById(`thumb-img-${i}`).src = url;
       document.getElementById(`thumb-${i}`).classList.add('has-image');
-    } catch (_) {}
-  }
+    }
+  } catch (err) { console.warn('[restoreImages]', err); }
   updateCount();
 }
 
@@ -1732,10 +1763,8 @@ async function restoreState() {
     }
   } catch (_) {}
 
-  try {
-    const rawImg = localStorage.getItem(LS_IMAGES);
-    if (rawImg) await restoreImages(JSON.parse(rawImg));
-  } catch (_) {}
+  await restoreImages();
+  localStorage.removeItem('ppb_images'); // 구 localStorage 이미지 데이터 정리
 }
 
 /* 텍스트 필드 자동 저장 */
