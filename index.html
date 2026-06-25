@@ -1081,6 +1081,20 @@ analyzeBtn.addEventListener('click', async () => {
     showCatToast('카테고리를 먼저 선택해주세요');
     return;
   }
+  if (_activeMajor === 'bag') {
+    if (!_activeMinor) {
+      showCatToast('가방 소재 종류를 선택해주세요 (가죽/패브릭/퍼·페더)');
+      return;
+    }
+    if (!_activeTertiary) {
+      showCatToast('소재 상세를 선택해주세요 (예: 세미글로시, 나일론 등)');
+      return;
+    }
+  }
+  if (_activeMajor === 'clothing' && !_activeMinor) {
+    showCatToast('의류 종류를 선택해주세요');
+    return;
+  }
   if (!images[0]?.file) {
     showBanner('error', '먼저 첫 번째 슬롯에 이미지를 업로드해 주세요.');
     setTimeout(hideBanner, 3000);
