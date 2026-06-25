@@ -1406,6 +1406,7 @@ async function analyzeImageWithClaude(items) {
     }
 
     const data  = await res.json();
+    console.log('분석 RAW 응답:', JSON.stringify(data.content));
     const text  = data.content?.[0]?.text || '';
     const cleaned = text.replace(/```json|```/g, '').trim();
     const match = cleaned.match(/\{[\s\S]*\}/);
