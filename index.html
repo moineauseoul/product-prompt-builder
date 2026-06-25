@@ -615,6 +615,20 @@
       margin-top: 8px;
     }
 
+    /* ── Category tertiary-group slide ── */
+    #category-tertiary-wrap {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.2s ease, opacity 0.15s ease, margin-top 0.2s ease;
+      margin-top: 0;
+    }
+    #category-tertiary-wrap.visible {
+      max-height: 80px;
+      opacity: 1;
+      margin-top: 6px;
+    }
+
     /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -730,6 +744,9 @@
       </div>
       <div id="category-sub-wrap">
         <div class="chip-group" id="category-sub-group"></div>
+      </div>
+      <div id="category-tertiary-wrap">
+        <div class="chip-group" id="category-tertiary-group"></div>
       </div>
     </div>
 
@@ -870,6 +887,27 @@ const SUB_CATEGORIES = {
   'bag':       [{ value: 'bag-leather', label: '가죽' }, { value: 'bag-fabric', label: '패브릭' }, { value: 'bag-fur', label: '퍼·페더' }],
   'clothing':  [{ value: 'outer', label: '아우터' }, { value: 'top', label: '상의' }, { value: 'pants', label: '바지' }, { value: 'skirt', label: '스커트' }, { value: 'dress', label: '드레스' }],
   'accessory': [],
+};
+
+const TERTIARY_CATEGORIES = {
+  'bag-leather': [
+    { value: 'glossy',      label: '유광' },
+    { value: 'semi-glossy', label: '세미글로시' },
+    { value: 'matte',       label: '무광' },
+    { value: 'suede',       label: '스웨이드' },
+    { value: 'nubuck',      label: '누벅' },
+  ],
+  'bag-fabric': [
+    { value: 'nylon',       label: '나일론' },
+    { value: 'canvas',      label: '캔버스' },
+    { value: 'cotton',      label: '면(코튼)' },
+    { value: 'mesh',        label: '메쉬' },
+    { value: 'eco',         label: '에코(비건)' },
+  ],
+  'bag-fur': [
+    { value: 'fur',         label: '퍼(fur)' },
+    { value: 'feather',     label: '페더(feather)' },
+  ],
 };
 
 /* ═══════════════════════════════════════════════
@@ -1066,10 +1104,11 @@ function bindSingleChip(groupId) {
 }
 bindSingleChip('cut-group');
 
-/* ── 카테고리 대분류/소분류 ── */
-let _activeMajor = '';
-let _activeMinor = '';
-let _sheenLevel  = ''; // 가죽 광택 레벨: full_matte / semi_matte / semi_glossy / high_gloss
+/* ── 카테고리 대분류/소분류/3차 ── */
+let _activeMajor    = '';
+let _activeMinor    = '';
+let _sheenLevel     = ''; // 가죽 광택 레벨: full_matte / semi_matte / semi_glossy / high_gloss
+let _activeTertiary = ''; // 3차 분류 선택값 (대분류/소분류 변경 시 초기화)
 
 function getActiveCategory() {
   if (_activeMajor === 'accessory') return 'accessory';
@@ -1081,7 +1120,9 @@ function renderSubGroup(major) {
   const subGroup = document.getElementById('category-sub-group');
   const subs = SUB_CATEGORIES[major] || [];
   subGroup.innerHTML = '';
-  _activeMinor = '';
+  _activeMinor    = '';
+  _activeTertiary = '';
+  document.getElementById('category-tertiary-wrap').classList.remove('visible');
   if (!subs.length) {
     subWrap.classList.remove('visible');
     return;
@@ -1095,11 +1136,43 @@ function renderSubGroup(major) {
       subGroup.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       _activeMinor = value;
+      renderTertiaryGroup(value);
       saveState();
     });
     subGroup.appendChild(btn);
   });
   subWrap.classList.add('visible');
+}
+
+function renderTertiaryGroup(minor) {
+  const tertiaryWrap  = document.getElementById('category-tertiary-wrap');
+  const tertiaryGroup = document.getElementById('category-tertiary-group');
+  const options = TERTIARY_CATEGORIES[minor] || [];
+  tertiaryGroup.innerHTML = '';
+  _activeTertiary = '';
+  if (!options.length) {
+    tertiaryWrap.classList.remove('visible');
+    return;
+  }
+  options.forEach(({ value, label }) => {
+    const btn = document.createElement('button');
+    btn.className     = 'chip';
+    btn.dataset.value = value;
+    btn.textContent   = label;
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('active')) {
+        btn.classList.remove('active');
+        _activeTertiary = '';
+      } else {
+        tertiaryGroup.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _activeTertiary = value;
+      }
+      saveState();
+    });
+    tertiaryGroup.appendChild(btn);
+  });
+  tertiaryWrap.classList.add('visible');
 }
 
 document.getElementById('category-main-group').querySelectorAll('.segment-btn').forEach(btn => {
@@ -1617,20 +1690,47 @@ function buildPrompt(values) {
     ];
 
   } else if (category === 'bag-leather') {
-    const _isGlossy   = _sheenLevel === 'semi_glossy' || _sheenLevel === 'high_gloss';
-    const _isMatte    = _sheenLevel === 'full_matte'  || _sheenLevel === 'semi_matte';
-    const _glossLabel = _sheenLevel === 'high_gloss'  ? 'high-gloss' : 'semi-glossy';
+    // 3차 분류 우선, 없으면 AI sheen_level을 동일 기준으로 매핑
+    const effectiveFinish = _activeTertiary || (() => {
+      if (_sheenLevel === 'high_gloss')                                return 'glossy';
+      if (_sheenLevel === 'semi_glossy')                               return 'semi-glossy';
+      if (_sheenLevel === 'full_matte' || _sheenLevel === 'semi_matte') return 'matte';
+      return '';
+    })();
+    const isGlossy     = effectiveFinish === 'glossy';
+    const isSemiGlossy = effectiveFinish === 'semi-glossy';
+    const isAnyGlossy  = isGlossy || isSemiGlossy;
+    const isMatte      = effectiveFinish === 'matte';
+    const isSuede      = effectiveFinish === 'suede';
+    const isNubuck     = effectiveFinish === 'nubuck';
+
+    const retouchLine = isAnyGlossy
+      ? isGlossy
+        ? `Retouch to enhance leather surface quality. Actively render glossy leather finish with strong specular highlights on handle top, body curves, and edge contours. The surface must NOT appear flat or matte.`
+        : `Retouch to enhance leather surface quality. Render semi-glossy leather finish with soft natural highlights on curves and edges. The surface must NOT appear flat or matte.`
+      : `Lightly retouch the bag: remove only major wrinkles and obvious deformations. Preserve natural leather/fabric character and subtle surface variations — maintain the bag's natural softness and volume, do not over-perfect or flatten the shape. Straighten and smooth out the handles — clean, taut, and naturally curved without kinks or bends.`;
+
+    const importantLine = isGlossy
+      ? `IMPORTANT: This is a HIGH-GLOSS leather bag. Strong specular highlights and mirror-like sheen must be rendered clearly. Do NOT render as matte.`
+      : isSemiGlossy
+      ? `IMPORTANT: This is a SEMI-GLOSSY leather bag. Subtle natural sheen and soft highlights must be visible. Do NOT render as matte or flat.`
+      : null;
+
+    const finishNote = isMatte  ? 'matte finish, no sheen, no specular highlights'
+                     : isSuede  ? 'suede texture, velvety matte surface, no sheen, soft nap texture'
+                     : isNubuck ? 'nubuck texture, fine matte surface, subtle dry texture, no gloss'
+                     : '';
+    const materialLine = finishNote
+      ? `Material: ${material} (${finishNote}). Color: ${color}. Key details: ${values.detail}.`
+      : `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`;
+
     lines = [
       `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
       `${cutView} view, centered composition. No mannequin, no model, no hands, no props.`,
-      _isGlossy
-        ? `Retouch to enhance leather surface quality. Actively render the ${_glossLabel} leather finish — add realistic specular highlights on handle top, body curves, and edge contours. The surface must NOT appear flat or matte.`
-        : `Lightly retouch the bag: remove only major wrinkles and obvious deformations. Preserve natural leather/fabric character and subtle surface variations — maintain the bag's natural softness and volume, do not over-perfect or flatten the shape. Straighten and smooth out the handles — clean, taut, and naturally curved without kinks or bends.`,
+      retouchLine,
       `Relight with soft, even studio lighting. Subtle natural shadow beneath the product only.`,
-      ...(_isGlossy ? [`IMPORTANT: This is a ${_glossLabel} leather bag. Visible sheen and specular highlights must be rendered clearly.`] : []),
-      _isMatte
-        ? `Material: ${material} (matte finish, no sheen). Color: ${color}. Key details: ${values.detail}.`
-        : `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`,
+      ...(importantLine ? [importantLine] : []),
+      materialLine,
       `Preserve exact product shape, proportions, and leather texture accurately. Enhance leather surface quality — show realistic natural sheen, soft highlights, and smooth grain texture. Preserve the original leather finish (glossy/semi-glossy/matte) exactly as shown in the reference image.`,
       `Ensure logo and hardware remain sharp and clearly readable.`,
       `Clean e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
@@ -1638,12 +1738,24 @@ function buildPrompt(values) {
     ];
 
   } else if (category === 'bag-fabric') {
+    const FABRIC_NOTES = {
+      'nylon':  'nylon fabric, NOT leather, lightweight synthetic material, subtle sheen from weave',
+      'canvas': 'canvas fabric, structured woven texture, matte surface',
+      'cotton': 'cotton fabric, soft matte texture, natural weave',
+      'mesh':   'mesh fabric, open weave structure, lightweight',
+      'eco':    'vegan leather / eco material, NOT genuine leather',
+    };
+    const fabricNote       = FABRIC_NOTES[_activeTertiary] || '';
+    const notLeatherSuffix = (_activeTertiary === 'nylon' || _activeTertiary === 'eco') ? ' (가죽 아님)' : '';
+    const fabricMaterialLine = fabricNote
+      ? `Material: ${material}${notLeatherSuffix}. ${fabricNote}. Color: ${color}. Key details: ${values.detail}.`
+      : `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`;
     lines = [
       `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
       `${cutView} view, centered composition. No mannequin, no model, no hands, no props.`,
       `Lightly retouch the bag: remove only major wrinkles and obvious deformations. Preserve natural leather/fabric character and subtle surface variations — maintain the bag's natural softness and volume, do not over-perfect or flatten the shape. Straighten and smooth out the handles — clean, taut, and naturally curved without kinks or bends.`,
       `Relight with soft, even studio lighting. Subtle natural shadow beneath the product only.`,
-      `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`,
+      fabricMaterialLine,
       `Preserve exact product shape and proportions. Emphasize the woven fabric texture and material character accurately — not leather, show the actual fabric grain and weave pattern.`,
       `Ensure logo and hardware remain sharp and clearly readable.`,
       `Preserve the exact position of all hardware, charms, and accessories as shown in the reference image. Do not relocate any hardware elements to different sides or positions.`,
@@ -1746,11 +1858,13 @@ function resetAll() {
   });
   document.getElementById('custom-bg').value = '';
   document.getElementById('prompt-output').value = '';
-  _activeMajor = '';
-  _activeMinor = '';
-  _sheenLevel  = '';
+  _activeMajor    = '';
+  _activeMinor    = '';
+  _sheenLevel     = '';
+  _activeTertiary = '';
   document.querySelectorAll('#category-main-group .segment-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('category-sub-wrap').classList.remove('visible');
+  document.getElementById('category-tertiary-wrap').classList.remove('visible');
   document.querySelectorAll('#cut-group .chip').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('#bg-group .color-chip').forEach(b => b.classList.remove('active'));
   localStorage.removeItem('ppb_state');
