@@ -1406,10 +1406,9 @@ async function analyzeImageWithClaude(items) {
     }
 
     const data  = await res.json();
-    console.log('분석 RAW 응답:', JSON.stringify(data.content));
     const text  = data.content?.[0]?.text || '';
-    const cleaned = text.replace(/```json|```/g, '').trim();
-    const match = cleaned.match(/\{[\s\S]*\}/);
+    const raw   = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const match = raw.match(/\{[\s\S]*\}/);
     if (!match) {
       console.error('[분석 원본 응답]', text);
       throw new Error('분석 결과를 파싱할 수 없습니다.');
