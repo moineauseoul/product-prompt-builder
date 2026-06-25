@@ -1733,34 +1733,27 @@ function buildPrompt(values) {
   } else if (category === 'bag-leather') {
     // 3차 분류 우선, 없으면 AI sheen_level을 동일 기준으로 매핑
     const effectiveFinish = _activeTertiary || (() => {
-      if (_sheenLevel === 'high_gloss')                                return 'glossy';
-      if (_sheenLevel === 'semi_glossy')                               return 'semi-glossy';
+      if (_sheenLevel === 'high_gloss')                                 return 'glossy';
+      if (_sheenLevel === 'semi_glossy')                                return 'semi-glossy';
       if (_sheenLevel === 'full_matte' || _sheenLevel === 'semi_matte') return 'matte';
       return '';
     })();
-    const isGlossy     = effectiveFinish === 'glossy';
-    const isSemiGlossy = effectiveFinish === 'semi-glossy';
-    const isAnyGlossy  = isGlossy || isSemiGlossy;
-    const isMatte      = effectiveFinish === 'matte';
-    const isSuede      = effectiveFinish === 'suede';
-    const isNubuck     = effectiveFinish === 'nubuck';
 
-    const retouchLine = isAnyGlossy
-      ? isGlossy
-        ? `Retouch to enhance leather surface quality. Actively render glossy leather finish with strong specular highlights on handle top, body curves, and edge contours. The surface must NOT appear flat or matte.`
-        : `Retouch to enhance leather surface quality. Render semi-glossy leather finish with soft natural highlights on curves and edges. The surface must NOT appear flat or matte.`
-      : `Lightly retouch the bag: remove only major wrinkles and obvious deformations. Preserve natural leather/fabric character and subtle surface variations — maintain the bag's natural softness and volume, do not over-perfect or flatten the shape. Straighten and smooth out the handles — clean, taut, and naturally curved without kinks or bends.`;
+    const GLOSS_LINES = {
+      'semi-glossy': `The leather finish is SEMI-GLOSSY — not matte, not flat. Render soft specular highlights on curved surfaces and edges. Do NOT use the original photo's finish as reference — apply semi-glossy rendering regardless.`,
+      'glossy':      `The leather finish is HIGH-GLOSS — render strong mirror-like specular highlights. Do NOT use the original photo's finish as reference.`,
+      'matte':       `The leather finish is MATTE — no sheen, no specular highlights, flat surface.`,
+      'suede':       `Suede texture — velvety matte surface, soft nap, no gloss.`,
+      'nubuck':      `Nubuck texture — fine dry matte surface, no gloss.`,
+    };
+    const glossLine = GLOSS_LINES[effectiveFinish] || null;
 
-    const importantLine = isGlossy
-      ? `IMPORTANT: This is a HIGH-GLOSS leather bag. Strong specular highlights and mirror-like sheen must be rendered clearly. Do NOT render as matte.`
-      : isSemiGlossy
-      ? `IMPORTANT: This is a SEMI-GLOSSY leather bag. Subtle natural sheen and soft highlights must be visible. Do NOT render as matte or flat.`
-      : null;
-
-    const finishNote = isMatte  ? 'matte finish, no sheen, no specular highlights'
-                     : isSuede  ? 'suede texture, velvety matte surface, no sheen, soft nap texture'
-                     : isNubuck ? 'nubuck texture, fine matte surface, subtle dry texture, no gloss'
-                     : '';
+    const FINISH_NOTES = {
+      'matte':  'matte finish, no sheen',
+      'suede':  'suede texture, velvety matte surface',
+      'nubuck': 'nubuck texture, fine dry matte surface',
+    };
+    const finishNote   = FINISH_NOTES[effectiveFinish] || '';
     const materialLine = finishNote
       ? `Material: ${material} (${finishNote}). Color: ${color}. Key details: ${values.detail}.`
       : `Material: ${material}. Color: ${color}. Key details: ${values.detail}.`;
@@ -1768,15 +1761,13 @@ function buildPrompt(values) {
     lines = [
       `Product retouching shot for e-commerce. Remove the existing background completely and replace with a solid ${bg} background.`,
       `${cutView} view, centered composition. No mannequin, no model, no hands, no props.`,
-      retouchLine,
-      `Relight with soft, even studio lighting. Subtle natural shadow beneath the product only.`,
-      `Preserve the EXACT shape, silhouette, and proportions of the original bag as shown in the reference image. Do NOT reinterpret or generalize the bag shape — reproduce the precise form faithfully.`,
-      ...(importantLine ? [importantLine] : []),
+      `Preserve the EXACT shape, silhouette, and proportions of the original bag as shown in the reference image. Do NOT reinterpret, generalize, or alter the bag shape in any way.`,
+      ...(glossLine ? [glossLine] : []),
+      `Relight with soft, even studio lighting. Natural shadow beneath product only.`,
       materialLine,
-      `Preserve exact product shape, proportions, and leather texture accurately. Enhance leather surface quality — show realistic natural sheen, soft highlights, and smooth grain texture. Preserve the original leather finish (glossy/semi-glossy/matte) exactly as shown in the reference image.`,
-      `Ensure logo and hardware remain sharp and clearly readable.`,
-      `Clean e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
       ...extras,
+      `Render all metal hardware with clean edges and realistic metallic highlights.`,
+      `Clean e-commerce product shot. No stylization, no artistic effects, no color distortion.`,
     ];
 
   } else if (category === 'bag-fabric') {
