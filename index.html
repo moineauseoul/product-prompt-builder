@@ -547,33 +547,39 @@
 
     /* ── Segment control (대분류) ── */
     .segment-group {
-      display: flex;
-      background: var(--gray-100);
-      border-radius: 8px;
+      display: inline-flex;
+      width: 100%;
+      background: #ffffff;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
       padding: 3px;
-      gap: 2px;
+      gap: 0;
     }
     .segment-btn {
       flex: 1;
       padding: 6px 12px;
       border: none;
-      border-radius: 6px;
-      background: transparent;
+      border-right: 1px solid #e5e7eb;
+      border-radius: 0;
+      background: #ffffff;
       font-family: inherit;
       font-size: 13px;
       font-weight: 500;
-      color: var(--gray-500);
+      color: #6b7280;
       cursor: pointer;
       transition: all .15s;
       white-space: nowrap;
       text-align: center;
     }
+    .segment-btn:last-child { border-right: none; }
     .segment-btn:hover { color: var(--gray-900); }
     .segment-btn.active {
-      background: #fff;
-      color: var(--gray-900);
-      box-shadow: 0 1px 3px rgba(0,0,0,.12);
+      background: #111827;
+      color: #ffffff;
+      border-radius: 8px;
+      border-right: none;
     }
+    .segment-btn.active + .segment-btn { border-left: none; }
 
     /* ── Category sub-group slide ── */
     #category-sub-wrap {
