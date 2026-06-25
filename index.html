@@ -545,6 +545,20 @@
     .input-wrap { position: relative; }
     .input-wrap input { padding-right: 36px; }
 
+    /* ── Category sub-group slide ── */
+    #category-sub-wrap {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.2s ease, opacity 0.15s ease, margin-top 0.2s ease;
+      margin-top: 0;
+    }
+    #category-sub-wrap.visible {
+      max-height: 60px;
+      opacity: 1;
+      margin-top: 8px;
+    }
+
     /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -653,16 +667,13 @@
     <p class="section-heading">상품 정보</p>
     <div>
       <p class="section-title">카테고리</p>
-      <div class="chip-group" id="category-group">
-        <button class="chip active" data-value="top">상의</button>
-        <button class="chip" data-value="pants">바지</button>
-        <button class="chip" data-value="skirt">스커트</button>
-        <button class="chip" data-value="dress">드레스</button>
-        <button class="chip" data-value="outer">아우터</button>
-        <button class="chip" data-value="bag-leather">가방(가죽)</button>
-        <button class="chip" data-value="bag-fabric">가방(패브릭)</button>
-        <button class="chip" data-value="bag-fur">가방(퍼·페더)</button>
+      <div class="chip-group" id="category-main-group">
+        <button class="chip" data-value="bag">가방</button>
+        <button class="chip" data-value="clothing">의류</button>
         <button class="chip" data-value="accessory">악세</button>
+      </div>
+      <div id="category-sub-wrap">
+        <div class="chip-group" id="category-sub-group"></div>
       </div>
     </div>
 
@@ -795,6 +806,12 @@ const BG_HEX = {
   'white':      '#ffffff',
   'light-gray': '#efefef',
   'soft-gray':  '#f5f5f5',
+};
+
+const SUB_CATEGORIES = {
+  'bag':       [{ value: 'bag-leather', label: '가죽' }, { value: 'bag-fabric', label: '패브릭' }, { value: 'bag-fur', label: '퍼·페더' }],
+  'clothing':  [{ value: 'outer', label: '아우터' }, { value: 'top', label: '상의' }, { value: 'pants', label: '바지' }, { value: 'skirt', label: '스커트' }, { value: 'dress', label: '드레스' }],
+  'accessory': [],
 };
 
 /* ═══════════════════════════════════════════════
@@ -985,8 +1002,52 @@ function bindSingleChip(groupId) {
     });
   });
 }
-bindSingleChip('category-group');
 bindSingleChip('cut-group');
+
+/* ── 카테고리 대분류/소분류 ── */
+let _activeMajor = '';
+let _activeMinor = '';
+
+function getActiveCategory() {
+  if (_activeMajor === 'accessory') return 'accessory';
+  return _activeMinor || '';
+}
+
+function renderSubGroup(major) {
+  const subWrap  = document.getElementById('category-sub-wrap');
+  const subGroup = document.getElementById('category-sub-group');
+  const subs = SUB_CATEGORIES[major] || [];
+  subGroup.innerHTML = '';
+  _activeMinor = '';
+  if (!subs.length) {
+    subWrap.classList.remove('visible');
+    return;
+  }
+  subs.forEach(({ value, label }) => {
+    const btn = document.createElement('button');
+    btn.className     = 'chip';
+    btn.dataset.value = value;
+    btn.textContent   = label;
+    btn.addEventListener('click', () => {
+      subGroup.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _activeMinor = value;
+      saveState();
+    });
+    subGroup.appendChild(btn);
+  });
+  subWrap.classList.add('visible');
+}
+
+document.getElementById('category-main-group').querySelectorAll('.chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('category-main-group').querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _activeMajor = btn.dataset.value;
+    renderSubGroup(_activeMajor);
+    saveState();
+  });
+});
 
 document.getElementById('bg-group').querySelectorAll('.color-chip').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1235,6 +1296,7 @@ function setCopyEnabled(on) {
 
 function validatePromptInputs() {
   const missing = [];
+  if (!getActiveCategory()) missing.push('카테고리');
   if (!document.getElementById('material').value.trim()) missing.push('소재');
   if (!document.getElementById('detail').value.trim())   missing.push('최종 디테일 설명');
   if (!document.getElementById('color-text').value.trim()) missing.push('컬러');
@@ -1298,7 +1360,7 @@ Respond in JSON only: {"material": "", "details": "", "color": ""}`,
 }
 
 function buildPrompt(values) {
-  const category = getActiveChip('category-group') || 'top';
+  const category = getActiveCategory() || 'top';
   const cut      = getActiveChip('cut-group')      || 'front';
   const bg       = getBackgroundValue();
   const cutView  = CUT_VIEW[cut] || cut;
@@ -1509,6 +1571,10 @@ function resetAll() {
   });
   document.getElementById('custom-bg').value = '';
   document.getElementById('prompt-output').value = '';
+  _activeMajor = '';
+  _activeMinor = '';
+  document.querySelectorAll('#category-main-group .chip').forEach(b => b.classList.remove('active'));
+  document.getElementById('category-sub-wrap').classList.remove('visible');
   localStorage.removeItem('ppb_state');
   localStorage.removeItem('ppb_images');
   translationCache = null;
@@ -1538,7 +1604,8 @@ function saveState() {
       detail:     document.getElementById('detail').value,
       color:      document.getElementById('color-text').value,
       detailRefs: [1,2,3,4].map(i => document.getElementById(`detail-ref-${i}`)?.value || ''),
-      category:   getActiveChip('category-group'),
+      mainCategory: _activeMajor,
+      subCategory:  _activeMinor,
       cut:        getActiveChip('cut-group'),
       bgChip:     document.querySelector('#bg-group .color-chip.active')?.dataset.value || '',
       bgCustom:   document.getElementById('custom-bg').value,
@@ -1610,7 +1677,19 @@ async function restoreState() {
         const el = document.getElementById(`detail-ref-${i + 1}`);
         if (el && val) el.value = val;
       });
-      if (s.category) _restoreChip('category-group', s.category);
+      if (s.mainCategory) {
+        _activeMajor = s.mainCategory;
+        document.querySelectorAll('#category-main-group .chip').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.value === s.mainCategory);
+        });
+        renderSubGroup(s.mainCategory);
+      }
+      if (s.subCategory) {
+        _activeMinor = s.subCategory;
+        document.querySelectorAll('#category-sub-group .chip').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.value === s.subCategory);
+        });
+      }
       if (s.cut)      _restoreChip('cut-group', s.cut);
       if (s.bgChip)   _restoreColorChip(s.bgChip);
       if (s.bgCustom) document.getElementById('custom-bg').value = s.bgCustom;
