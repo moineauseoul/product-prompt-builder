@@ -531,6 +531,26 @@
     .copy-toast { font-size: 12px; color: var(--success); opacity: 0; transition: opacity .3s; margin-right: 6px; }
     .copy-toast.show { opacity: 1; }
 
+    /* ── Category toast ── */
+    #cat-toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: #111827;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 10px 22px;
+      border-radius: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .22s, transform .22s;
+      z-index: 9999;
+      white-space: nowrap;
+    }
+    #cat-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
     /* ── API Key (inside dropdown) ── */
     .api-key-status { display: flex; align-items: center; gap: 4px; font-size: 11px; margin-top: 4px; }
     .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gray-300); }
@@ -819,6 +839,8 @@
 
 </div><!-- /main-content -->
 
+<div id="cat-toast"></div>
+
 <script>
 /* ═══════════════════════════════════════════════
    1. 상수 / 매핑 테이블
@@ -1017,6 +1039,10 @@ uploadArea.appendChild(detailSection);
 uploadArea.addEventListener('drop', async (e) => { await addDroppedImages(e.dataTransfer.files); });
 
 analyzeBtn.addEventListener('click', async () => {
+  if (!_activeMajor) {
+    showCatToast('카테고리를 먼저 선택해주세요');
+    return;
+  }
   if (!images[0]?.file) {
     showBanner('error', '먼저 첫 번째 슬롯에 이미지를 업로드해 주세요.');
     setTimeout(hideBanner, 3000);
@@ -1174,6 +1200,15 @@ function hideBanner() {
   spinner.style.display = 'none';
 }
 
+let _catToastTimer = null;
+function showCatToast(msg) {
+  const el = document.getElementById('cat-toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_catToastTimer);
+  _catToastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
 /* ═══════════════════════════════════════════════
    8. 필드 분석 상태
 ═══════════════════════════════════════════════ */
@@ -1209,6 +1244,114 @@ function fileToBase64(file) {
 /* ═══════════════════════════════════════════════
    10. Claude API 이미지 분석
 ═══════════════════════════════════════════════ */
+function buildAnalysisSystemPrompt() {
+  const minor = _activeMinor || (_activeMajor === 'accessory' ? 'accessory' : '');
+
+  const CAT_LABEL = {
+    'bag-leather': '가방 > 가죽', 'bag-fabric': '가방 > 패브릭', 'bag-fur': '가방 > 퍼·페더',
+    'outer': '의류 > 아우터', 'top': '의류 > 상의', 'pants': '의류 > 바지',
+    'skirt': '의류 > 스커트', 'dress': '의류 > 드레스', 'accessory': '악세',
+  };
+
+  const CAT_FOCUS = {
+    'bag-leather': `
+[Category focus — Leather Bag]
+- Leather gloss level (REQUIRED): examine highlight areas and edge reflections, then classify as one of:
+    full matte (suede/nubuck) / semi-matte (natural full-grain) / semi-glossy (smooth leather/calfskin) / high gloss (patent/coated)
+  Dark/black leather is especially prone to misidentification — examine carefully. Always include in material result (e.g. '세미글로시 스무스 레더').
+- Hardware: metal tone (gold-tone/silver-tone/oxidised), exact position of each piece.
+- Strap/handle: structure, attachment method, adjustability.
+- Closure: type (zipper/magnetic snap/turn-lock/flap) and position.`,
+
+    'bag-fabric': `
+[Category focus — Fabric Bag]
+- Fabric type: identify exact material (canvas, nylon, jacquard, tweed, etc.) — explicitly note "가죽 아님(not leather)".
+- Shape retention: does the bag hold its form firmly or is it soft/slouchy?
+- Weave/texture: visible weave pattern, surface texture, any coating or treatment.
+- Hardware: metal tone, exact positions.`,
+
+    'bag-fur': `
+[Category focus — Fur/Feather Bag]
+- Material texture: describe fur/feather density, strand length, and softness.
+- Color uniformity: note any gradient, variation, or highlight in the fur/feathers.
+- Volume and silhouette: overall shape and fluffiness level.`,
+
+    'outer': `
+[Category focus — Outerwear]
+- Silhouette structure: overall shape (oversized/tailored/boxy/cocoon), shoulder line description.
+- Lapel/collar: exact type (notch/peak/shawl lapel, hood, funnel neck, etc.) and shape.
+- Material weight: describe fabric weight and structure (lightweight/medium/heavy/padded).
+- Closure: button/zipper style and placement.`,
+
+    'top': `
+[Category focus — Top]
+- Drape quality: how the fabric falls and moves (stiff/flowy/clingy).
+- Neckline: exact shape and depth.
+- Sleeve: type (set-in/raglan/drop-shoulder), length, and any cuff details.
+- Fit: silhouette (loose/regular/fitted/oversized) description.`,
+
+    'pants': `
+[Category focus — Pants]
+- Silhouette: wide-leg/straight/slim/tapered/flared; rise height (high/mid/low).
+- Waistband: type (elastic/structured/belted), closures, belt loops.
+- Hem: type (clean-hemmed/raw/cuffed/tapered) and any bottom detail.
+- Special features: pleats, cargo pockets, pintucks.`,
+
+    'skirt': `
+[Category focus — Skirt]
+- Drape and volume: flare level, pleat or gather amount, any underskirt volume.
+- Length: approximate (mini/midi/maxi) and knee-line relationship.
+- Waistband: type and closure details.
+- Movement quality: how the skirt falls when hanging.`,
+
+    'dress': `
+[Category focus — Dress]
+- Full silhouette: overall shape from neckline to hem (A-line/shift/wrap/fitted/etc.).
+- Fabric drape: how the material falls.
+- Neckline: exact design.
+- Waist: defined or undefined, any seam, tie, or elastic.`,
+
+    'accessory': `
+[Category focus — Accessory]
+- Material: exact composition and surface finish (polished/brushed/matte/coated).
+- Form: overall shape and relative size.
+- Wearing structure: how the accessory attaches or is worn.
+- Decorative elements: stones, engravings, charms, logos, etc.`,
+  };
+
+  const catKey   = minor;
+  const catLabel = CAT_LABEL[catKey] || ({ bag: '가방', clothing: '의류', accessory: '악세' }[_activeMajor] || _activeMajor);
+  const catFocus = CAT_FOCUS[catKey] || '';
+
+  return `You are an expert fashion product analyst specializing in e-commerce product photography.
+Current product category: ${catLabel}
+${catFocus}
+
+Analyze the provided product images in detail and extract the following in Korean:
+
+1. material: Describe the fabric or material composition in detail. Include texture, weight, finish (e.g. 광택있는, 매트한, 부드러운), and any mixed materials. Be specific (e.g. '100% 코튼 저지, 부드럽고 가벼운 텍스처' not just '코튼').
+
+2. details: List ALL key design details you can observe. Include:
+   - Silhouette and fit (e.g. 오버핏, 슬림핏)
+   - Neckline style (e.g. 크루넥, V넥, 보트넥)
+   - Sleeve type and length
+   - Closures (buttons, zippers, ties)
+   - Special design features (pleats, pintucks, slits, ruffles)
+   - Logo or branding details (location, type: embroidered/metal/printed)
+   - For logo details, pay special attention to: exact location on the garment (use reference slot descriptions if provided), material type (embroidered/metal charm/printed), size (small/medium), and exact position description (e.g. lower right hem, center chest, etc). Use the slot description labels provided to understand the context of each detail image.
+   - Hem and edge finishing details
+   - Any hardware or accessories
+
+3. color: Describe the color in detail including:
+   - Base color(s) with specific tone (e.g. 크림 아이보리, 더스티 핑크)
+   - Pattern if any (e.g. 가는 수평 스트라이프, 체크)
+   - Color combination if multicolor
+
+If multiple images are provided, use Slot 1 as the primary reference and extract additional details from Slots 2-5 to supplement the analysis.
+
+Respond in Korean JSON only: {"material": "", "details": "", "color": ""}`;
+}
+
 async function analyzeImageWithClaude(items) {
   const apiKey = localStorage.getItem('claude_api_key');
   if (!apiKey) {
@@ -1240,37 +1383,7 @@ async function analyzeImageWithClaude(items) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 1500,
-        system: `You are an expert fashion product analyst specializing in e-commerce product photography. Analyze the provided product images in detail and extract the following in Korean:
-
-1. material: Describe the fabric or material composition in detail. Include texture, weight, finish (e.g. 광택있는, 매트한, 부드러운), and any mixed materials. Be specific (e.g. '100% 코튼 저지, 부드럽고 가벼운 텍스처' not just '코튼').
-
-   For leather products, you MUST identify and state the gloss level using one of these four grades:
-   - full matte: no sheen at all (suede, nubuck, etc.)
-   - semi-matte: barely-there sheen (natural full-grain leather)
-   - semi-glossy: subtle, soft sheen (smooth leather, soft calfskin)
-   - high gloss: strong, mirror-like shine (patent leather, special-coated leather)
-
-   Dark or black leather products are especially prone to gloss misidentification — carefully examine highlight areas and edge reflections in the image before deciding the gloss level. Always include the gloss level in the material description. (e.g. '세미글로시 스무스 레더', '풀매트 스웨이드')
-
-2. details: List ALL key design details you can observe. Include:
-   - Silhouette and fit (e.g. 오버핏, 슬림핏)
-   - Neckline style (e.g. 크루넥, V넥, 보트넥)
-   - Sleeve type and length
-   - Closures (buttons, zippers, ties)
-   - Special design features (pleats, pintucks, slits, ruffles)
-   - Logo or branding details (location, type: embroidered/metal/printed)
-   - For logo details, pay special attention to: exact location on the garment (use reference slot descriptions if provided), material type (embroidered/metal charm/printed), size (small/medium), and exact position description (e.g. lower right hem, center chest, etc). Use the slot description labels provided to understand the context of each detail image.
-   - Hem and edge finishing details
-   - Any hardware or accessories
-
-3. color: Describe the color in detail including:
-   - Base color(s) with specific tone (e.g. 크림 아이보리, 더스티 핑크)
-   - Pattern if any (e.g. 가는 수평 스트라이프, 체크)
-   - Color combination if multicolor
-
-If multiple images are provided, use Slot 1 as the primary reference and extract additional details from Slots 2-5 to supplement the analysis.
-
-Respond in Korean JSON only: {"material": "", "details": "", "color": ""}`,
+        system: buildAnalysisSystemPrompt(),
         messages: [{
           role: 'user',
           content: [
