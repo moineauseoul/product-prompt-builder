@@ -1488,9 +1488,36 @@ async function analyzeImageWithClaude(items) {
     }
 
     const result = JSON.parse(match[0]);
-    document.getElementById('material').value   = result.material || '';
-    document.getElementById('detail').value     = result.details  || '';
-    document.getElementById('color-text').value = result.color    || '';
+
+    // 3차 분류 선택값에 따른 소재 prefix 매핑
+    const TERTIARY_MATERIAL_PREFIX = {
+      'glossy':      '[유광 가죽] ',
+      'semi-glossy': '[세미글로시 가죽] ',
+      'matte':       '[무광 가죽] ',
+      'suede':       '[스웨이드] ',
+      'nubuck':      '[누벅] ',
+      'nylon':       '[나일론 / 가죽 아님] ',
+      'canvas':      '[캔버스] ',
+      'cotton':      '[면(코튼)] ',
+      'mesh':        '[메쉬] ',
+      'eco':         '[에코 / 가죽 아님] ',
+      'fur':         '[퍼(fur)] ',
+      'feather':     '[페더(feather)] ',
+    };
+    const tertiaryPrefix  = TERTIARY_MATERIAL_PREFIX[_activeTertiary] || '';
+    const rawMaterial     = result.material || '';
+    const materialValue   = tertiaryPrefix ? `${tertiaryPrefix}${rawMaterial}` : rawMaterial;
+
+    // 3차 분류가 유광/세미글로시이면 컬러 텍스트에서 무광 관련 단어 제거
+    const isGlossyTertiary = _activeTertiary === 'glossy' || _activeTertiary === 'semi-glossy';
+    const rawColor = result.color || '';
+    const colorValue = isGlossyTertiary
+      ? rawColor.replace(/무광|매트|matte/gi, '').replace(/\s{2,}/g, ' ').replace(/^[\s,\/]+|[\s,\/]+$/g, '').trim()
+      : rawColor;
+
+    document.getElementById('material').value   = materialValue;
+    document.getElementById('detail').value     = result.details || '';
+    document.getElementById('color-text').value = colorValue;
     _sheenLevel      = result.sheen_level || '';
     translationCache = null;
 
